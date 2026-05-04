@@ -24,7 +24,7 @@ class GameView(arcade.View):
     def on_draw(self) -> None:
         self.clear()
         arcade.draw_text(
-            "CS10 Arcade Starter",
+            "sup bro",
             SCREEN_WIDTH / 2,
             SCREEN_HEIGHT / 2 + 24,
             arcade.color.WHITE,

@@ -4,20 +4,28 @@ import arcade
 # --- Constants ---
 SPRITE_SCALING_PLAYER = 0.03
 SPRITE_SCALING_COIN = 0.3
-COIN_COUNT = 10
+COIN_COUNT = 50
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-WINDOW_TITLE = "Linear Coins + Freeze on Hit"
+WINDOW_TITLE = "Coin Variants + Freeze Game"
+
+
+# --- Coin Variants ---
+COIN_TYPES = [
+    {"texture": "coin_slow.png", "speed": 1},
+    {"texture": "coin_medium.png", "speed": 2},
+    {"texture": "coin_fast.png", "speed": 3},
+    {"texture": "coin_insane.png", "speed": 5},
+]
 
 
 class Coin(arcade.Sprite):
-    def __init__(self, filename, scale):
-        super().__init__(filename, scale=scale)
+    def __init__(self, texture, scale, speed):
+        super().__init__(texture, scale=scale)
 
-        self.speed = random.randint(1, 4)
+        self.speed = speed
         self.pick_new_direction()
-
         self.change_timer = random.uniform(1.0, 3.0)
 
     def pick_new_direction(self):
@@ -46,7 +54,7 @@ class Coin(arcade.Sprite):
         if self.bottom < 0 or self.top > WINDOW_HEIGHT:
             self.change_y *= -1
 
-        # Randomly change direction
+        # Change direction occasionally
         self.change_timer -= delta_time
         if self.change_timer <= 0:
             self.pick_new_direction()
@@ -85,14 +93,19 @@ class GameView(arcade.View):
         self.target_x = 50
         self.target_y = 50
 
-        # Coins
+        # --- Create coins with variants ---
         for _ in range(COIN_COUNT):
+            coin_type = random.choice(COIN_TYPES)
+
             coin = Coin(
-                ":resources:images/items/coinGold.png",
-                SPRITE_SCALING_COIN
+                coin_type["texture"],
+                SPRITE_SCALING_COIN,
+                coin_type["speed"]
             )
+
             coin.center_x = random.randrange(WINDOW_WIDTH)
             coin.center_y = random.randrange(WINDOW_HEIGHT)
+
             self.coin_list.append(coin)
 
     def on_draw(self):
@@ -127,11 +140,11 @@ class GameView(arcade.View):
 
     def on_update(self, delta_time):
         if self.game_over:
-            return  # 🔒 Freeze everything
+            return
 
         self.coin_list.update(delta_time)
 
-        # Smooth movement
+        # Player movement
         speed = 5
         dx = self.target_x - self.player_sprite.center_x
         dy = self.target_y - self.player_sprite.center_y
@@ -144,7 +157,7 @@ class GameView(arcade.View):
         self.player_sprite.center_x += dx * speed
         self.player_sprite.center_y += dy * speed
 
-        # --- Collision = freeze game ---
+        # Collision = freeze game
         if arcade.check_for_collision_with_list(
             self.player_sprite, self.coin_list
         ):

@@ -1,6 +1,5 @@
 import random
 import arcade
-import os
 
 # --- Constants ---
 SPRITE_SCALING_PLAYER = 0.03
@@ -9,66 +8,55 @@ ENTITY_COUNT = 50
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-WINDOW_TITLE = "Traffic Variants Game"
+WINDOW_TITLE = "Stable Traffic Variants Game"
 
 
-# --- Safe loader ---
-def load_texture_safe(path, fallback):
-    return path if os.path.exists(path) else fallback
-
-
-# --- Variant Definitions (EDIT THESE DIRECTLY) ---
+# --- Variants (SAFE VERSION) ---
 CAR = {
     "name": "car",
-    "texture": load_texture_safe("car.png", ":resources:images/items/coinGold.png"),
+    "texture": "car.png",
     "speed": 6
 }
 
 CYCLIST = {
     "name": "cyclist",
-    "texture": load_texture_safe("cyclist.png", ":resources:images/items/gemBlue.png"),
+    "texture": "cyclist.png",
     "speed": 4
 }
 
 PEDESTRIAN = {
     "name": "pedestrian",
-    "texture": load_texture_safe("pedestrian.png", ":resources:images/items/gemRed.png"),
+    "texture": "pedestrian.png",
     "speed": 2
 }
 
 CAT = {
     "name": "cat",
-    "texture": load_texture_safe("cat.png", ":resources:images/items/star.png"),
+    "texture": "cat.png",
     "speed_min": 2,
     "speed_max": 4
 }
 
-# List used only for spawning
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
 
 
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
-        super().__init__(config["texture"], scale=SPRITE_SCALING_ENTITY)
+        super().__init__(config["texture"], SPRITE_SCALING_ENTITY)
 
-        self.name = config["name"]
         self.config = config
+        self.name = config["name"]
 
-        self.change_timer = random.uniform(1.0, 3.0)
-        self.pick_direction()
+        self.timer = random.uniform(1.0, 3.0)
+        self.set_direction()
 
     def get_speed(self):
-        # Cat = variable speed
         if self.name == "cat":
-            return random.uniform(
-                self.config["speed_min"],
-                self.config["speed_max"]
-            )
+            return random.uniform(self.config["speed_min"], self.config["speed_max"])
         return self.config["speed"]
 
-    def pick_direction(self):
+    def set_direction(self):
         speed = self.get_speed()
-
         direction = random.choice(["up", "down", "left", "right"])
 
         if direction == "up":
@@ -84,84 +72,59 @@ class MovingEntity(arcade.Sprite):
             self.change_x = speed
             self.change_y = 0
 
-    def update(self, delta_time: float = 1 / 60):
+    def update(self, delta_time):
         self.center_x += self.change_x
         self.center_y += self.change_y
 
-        # Bounce
         if self.left < 0 or self.right > WINDOW_WIDTH:
             self.change_x *= -1
         if self.bottom < 0 or self.top > WINDOW_HEIGHT:
             self.change_y *= -1
 
-        # Change direction occasionally
-        self.change_timer -= delta_time
-        if self.change_timer <= 0:
-            self.pick_direction()
-            self.change_timer = random.uniform(1.0, 3.0)
+        self.timer -= delta_time
+        if self.timer <= 0:
+            self.set_direction()
+            self.timer = random.uniform(1.0, 3.0)
 
 
 class GameView(arcade.View):
-    def __init__(self):
-        super().__init__()
-
-        self.player_list = None
-        self.entity_list = None
-        self.player_sprite = None
-
-        self.background = None
-
-        self.target_x = 0
-        self.target_y = 0
-
-        self.game_over = False
-
     def setup(self):
         self.player_list = arcade.SpriteList()
         self.entity_list = arcade.SpriteList()
 
-        # Background
-        bg_path = load_texture_safe(
-            "bgimage.png",
-            ":resources:images/backgrounds/abstract_1.jpg"
-        )
-        self.background = arcade.load_texture(bg_path)
+        self.background = arcade.load_texture("bgimage.png")
 
-        # Player
-        player_path = load_texture_safe(
+        self.player_sprite = arcade.Sprite(
             "waymo.avif",
-            ":resources:images/animated_characters/female_person/femalePerson_idle.png"
+            SPRITE_SCALING_PLAYER
         )
 
-        self.player_sprite = arcade.Sprite(player_path, SPRITE_SCALING_PLAYER)
         self.player_sprite.center_x = 50
         self.player_sprite.center_y = 50
+
         self.player_list.append(self.player_sprite)
 
         self.target_x = 50
         self.target_y = 50
 
-        # Spawn entities
         for _ in range(ENTITY_COUNT):
             config = random.choice(ENTITY_TYPES)
-            entity = MovingEntity(config)
 
+            entity = MovingEntity(config)
             entity.center_x = random.randrange(WINDOW_WIDTH)
             entity.center_y = random.randrange(WINDOW_HEIGHT)
 
             self.entity_list.append(entity)
+
+        self.game_over = False
 
     def on_draw(self):
         self.clear()
 
         arcade.draw_texture_rect(
             self.background,
-            arcade.rect.XYWH(
-                WINDOW_WIDTH / 2,
-                WINDOW_HEIGHT / 2,
-                WINDOW_WIDTH,
-                WINDOW_HEIGHT
-            )
+            arcade.rect.XYWH(WINDOW_WIDTH/2, WINDOW_HEIGHT/2,
+                             WINDOW_WIDTH, WINDOW_HEIGHT)
         )
 
         self.entity_list.draw()
@@ -170,8 +133,8 @@ class GameView(arcade.View):
         if self.game_over:
             arcade.draw_text(
                 "GAME OVER",
-                WINDOW_WIDTH / 2,
-                WINDOW_HEIGHT / 2,
+                WINDOW_WIDTH/2,
+                WINDOW_HEIGHT/2,
                 arcade.color.RED,
                 40,
                 anchor_x="center"
@@ -187,12 +150,11 @@ class GameView(arcade.View):
 
         self.entity_list.update(delta_time)
 
-        # Player movement
         speed = 5
         dx = self.target_x - self.player_sprite.center_x
         dy = self.target_y - self.player_sprite.center_y
 
-        dist = (dx**2 + dy**2) ** 0.5
+        dist = (dx*dx + dy*dy) ** 0.5
         if dist > 0:
             dx /= dist
             dy /= dist
@@ -200,26 +162,15 @@ class GameView(arcade.View):
         self.player_sprite.center_x += dx * speed
         self.player_sprite.center_y += dy * speed
 
-        # Collision = freeze
-        if arcade.check_for_collision_with_list(
-            self.player_sprite, self.entity_list
-        ):
+        if arcade.check_for_collision_with_list(self.player_sprite, self.entity_list):
             self.game_over = True
-
-    def on_key_press(self, key, modifiers):
-        if key == arcade.key.R:
-            self.setup()
-            self.game_over = False
 
 
 def main():
     window = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
-    window.set_mouse_cursor_visible(False)
-
     game = GameView()
     game.setup()
     window.show_view(game)
-
     arcade.run()
 
 

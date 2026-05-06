@@ -8,7 +8,7 @@ COIN_COUNT = 50
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-WINDOW_TITLE = "Random Moving Coins + Mouse Player"
+WINDOW_TITLE = "Blocking Coins + Score Penalty"
 
 
 class Coin(arcade.Sprite):
@@ -29,13 +29,16 @@ class Coin(arcade.Sprite):
             self.change_y += random.uniform(-1.5, 1.5)
             self.change_timer = random.uniform(0.5, 2.0)
 
+        # small randomness
         self.change_x += random.uniform(-0.1, 0.1)
         self.change_y += random.uniform(-0.1, 0.1)
 
+        # clamp speed
         max_speed = 4
         self.change_x = max(-max_speed, min(self.change_x, max_speed))
         self.change_y = max(-max_speed, min(self.change_y, max_speed))
 
+        # bounce off screen edges
         if self.left < 0 or self.right > WINDOW_WIDTH:
             self.change_x *= -1
         if self.bottom < 0 or self.top > WINDOW_HEIGHT:
@@ -55,11 +58,15 @@ class GameView(arcade.View):
 
         self.background = None
 
+        # mouse target
+        self.target_x = 0
+        self.target_y = 0
+
     def setup(self):
         self.player_list = arcade.SpriteList()
         self.coin_list = arcade.SpriteList()
 
-        # ✅ Load background (file must exist in same folder)
+        # Background (make sure file exists)
         self.background = arcade.load_texture("bgimage.png")
 
         self.score = 0
@@ -73,12 +80,13 @@ class GameView(arcade.View):
         # Player
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
-             scale=SPRITE_SCALING_PLAYER
-
-
+            scale=SPRITE_SCALING_PLAYER
         )
         self.player_sprite.position = (50, 50)
         self.player_list.append(self.player_sprite)
+
+        self.target_x = 50
+        self.target_y = 50
 
         # Coins
         for _ in range(COIN_COUNT):
@@ -93,7 +101,6 @@ class GameView(arcade.View):
     def on_draw(self):
         self.clear()
 
-        # ✅ Correct function for your Arcade version
         arcade.draw_texture_rect(
             self.background,
             arcade.rect.XYWH(
@@ -109,18 +116,41 @@ class GameView(arcade.View):
         self.score_text.draw()
 
     def on_mouse_motion(self, x, y, dx, dy):
-        self.player_sprite.position = (x, y)
+        self.target_x = x
+        self.target_y = y
 
     def on_update(self, delta_time):
         self.coin_list.update(delta_time)
 
+        # --- Smooth movement toward mouse ---
+        speed = 5
+
+        dx = self.target_x - self.player_sprite.center_x
+        dy = self.target_y - self.player_sprite.center_y
+
+        distance = (dx**2 + dy**2) ** 0.5
+        if distance > 0:
+            dx /= distance
+            dy /= distance
+
+        # --- Move X ---
+        self.player_sprite.center_x += dx * speed
+        if arcade.check_for_collision_with_list(self.player_sprite, self.coin_list):
+            self.player_sprite.center_x -= dx * speed  # undo
+
+        # --- Move Y ---
+        self.player_sprite.center_y += dy * speed
+        if arcade.check_for_collision_with_list(self.player_sprite, self.coin_list):
+            self.player_sprite.center_y -= dy * speed  # undo
+
+        # --- Score penalty on touch ---
         hit_list = arcade.check_for_collision_with_list(
             self.player_sprite, self.coin_list
         )
 
         for coin in hit_list:
             coin.remove_from_sprite_lists()
-            self.score += 1
+            self.score -= 1  # subtract points
 
         self.score_text.text = f"Score: {self.score}"
 

@@ -4,12 +4,12 @@ import os
 
 # --- Constants ---
 SPRITE_SCALING_PLAYER = 0.03
-SPRITE_SCALING_COIN = 0.3
-COIN_COUNT = 50
+SPRITE_SCALING_ENTITY = 0.3
+ENTITY_COUNT = 50
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-WINDOW_TITLE = "Traffic Dodge Game"
+WINDOW_TITLE = "Traffic Variants Game"
 
 
 # --- Safe loader ---
@@ -17,47 +17,54 @@ def load_texture_safe(path, fallback):
     return path if os.path.exists(path) else fallback
 
 
-# --- Entity Types ---
-ENTITY_TYPES = [
-    {
-        "name": "car",
-        "texture": load_texture_safe("car.png", ":resources:images/items/coinGold.png"),
-        "speed": 6
-    },
-    {
-        "name": "cyclist",
-        "texture": load_texture_safe("cyclist.png", ":resources:images/items/gemBlue.png"),
-        "speed": 4
-    },
-    {
-        "name": "pedestrian",
-        "texture": load_texture_safe("pedestrian.png", ":resources:images/items/gemRed.png"),
-        "speed": 2
-    },
-    {
-        "name": "cat",
-        "texture": load_texture_safe("cat.png", ":resources:images/items/star.png"),
-        "speed": None  # special behavior
-    },
-]
+# --- Variant Definitions (EDIT THESE DIRECTLY) ---
+CAR = {
+    "name": "car",
+    "texture": load_texture_safe("car.png", ":resources:images/items/coinGold.png"),
+    "speed": 6
+}
+
+CYCLIST = {
+    "name": "cyclist",
+    "texture": load_texture_safe("cyclist.png", ":resources:images/items/gemBlue.png"),
+    "speed": 4
+}
+
+PEDESTRIAN = {
+    "name": "pedestrian",
+    "texture": load_texture_safe("pedestrian.png", ":resources:images/items/gemRed.png"),
+    "speed": 2
+}
+
+CAT = {
+    "name": "cat",
+    "texture": load_texture_safe("cat.png", ":resources:images/items/star.png"),
+    "speed_min": 2,
+    "speed_max": 4
+}
+
+# List used only for spawning
+ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
 
 
 class MovingEntity(arcade.Sprite):
-    def __init__(self, data):
-        super().__init__(data["texture"], scale=SPRITE_SCALING_COIN)
+    def __init__(self, config):
+        super().__init__(config["texture"], scale=SPRITE_SCALING_ENTITY)
 
-        self.name = data["name"]
-        self.base_speed = data["speed"]
+        self.name = config["name"]
+        self.config = config
 
         self.change_timer = random.uniform(1.0, 3.0)
-
         self.pick_direction()
 
     def get_speed(self):
-        # Cat has variable speed
+        # Cat = variable speed
         if self.name == "cat":
-            return random.uniform(2, 4)  # between pedestrian (2) and cyclist (4)
-        return self.base_speed
+            return random.uniform(
+                self.config["speed_min"],
+                self.config["speed_max"]
+            )
+        return self.config["speed"]
 
     def pick_direction(self):
         speed = self.get_speed()
@@ -87,21 +94,11 @@ class MovingEntity(arcade.Sprite):
         if self.bottom < 0 or self.top > WINDOW_HEIGHT:
             self.change_y *= -1
 
-        # Change direction
+        # Change direction occasionally
         self.change_timer -= delta_time
         if self.change_timer <= 0:
             self.pick_direction()
             self.change_timer = random.uniform(1.0, 3.0)
-
-    def draw_label(self):
-        arcade.draw_text(
-            self.name,
-            self.center_x,
-            self.top + 5,
-            arcade.color.WHITE,
-            10,
-            anchor_x="center"
-        )
 
 
 class GameView(arcade.View):
@@ -144,10 +141,10 @@ class GameView(arcade.View):
         self.target_x = 50
         self.target_y = 50
 
-        # Entities
-        for _ in range(COIN_COUNT):
-            data = random.choice(ENTITY_TYPES)
-            entity = MovingEntity(data)
+        # Spawn entities
+        for _ in range(ENTITY_COUNT):
+            config = random.choice(ENTITY_TYPES)
+            entity = MovingEntity(config)
 
             entity.center_x = random.randrange(WINDOW_WIDTH)
             entity.center_y = random.randrange(WINDOW_HEIGHT)
@@ -169,10 +166,6 @@ class GameView(arcade.View):
 
         self.entity_list.draw()
         self.player_list.draw()
-
-        # Draw labels
-        for entity in self.entity_list:
-            entity.draw_label()
 
         if self.game_over:
             arcade.draw_text(

@@ -8,9 +8,6 @@ ENTITY_COUNT = 4
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
-GRID_SIZE = 40
-GRID_COLS = WINDOW_WIDTH // GRID_SIZE
-GRID_ROWS = WINDOW_HEIGHT // GRID_SIZE
 PLAYER_TILES_PER_SECOND = 8
 
 # Bottom row first. "#" tiles line up with the streets in grid.png.
@@ -34,6 +31,11 @@ STREET_TILE_ROWS = (
     "..#...#.##.....##########.######",
     "##########.....#................",
 )
+
+GRID_COLS = len(STREET_TILE_ROWS[0])
+GRID_ROWS = len(STREET_TILE_ROWS)
+GRID_CELL_WIDTH = WINDOW_WIDTH / GRID_COLS
+GRID_CELL_HEIGHT = WINDOW_HEIGHT / GRID_ROWS
 
 DIRECTION_DELTAS = {
     "up": (0, 1),
@@ -74,8 +76,8 @@ ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
 
 def grid_to_center(grid_x, grid_y):
     return (
-        grid_x * GRID_SIZE + GRID_SIZE / 2,
-        grid_y * GRID_SIZE + GRID_SIZE / 2,
+        grid_x * GRID_CELL_WIDTH + GRID_CELL_WIDTH / 2,
+        grid_y * GRID_CELL_HEIGHT + GRID_CELL_HEIGHT / 2,
     )
 
 
@@ -226,27 +228,27 @@ class GameView(arcade.View):
         for col in range(GRID_COLS):
             for row in range(GRID_ROWS):
                 center_x, center_y = grid_to_center(col, row)
-                left = center_x - (GRID_SIZE - 2) / 2
-                bottom = center_y - (GRID_SIZE - 2) / 2
+                left = center_x - (GRID_CELL_WIDTH - 2) / 2
+                bottom = center_y - (GRID_CELL_HEIGHT - 2) / 2
                 arcade.draw_lbwh_rectangle_filled(
                     left,
                     bottom,
-                    GRID_SIZE - 2,
-                    GRID_SIZE - 2,
+                    GRID_CELL_WIDTH - 2,
+                    GRID_CELL_HEIGHT - 2,
                     arcade.color.DARK_SLATE_GRAY,
                 )
                 arcade.draw_lbwh_rectangle_outline(
                     left,
                     bottom,
-                    GRID_SIZE - 2,
-                    GRID_SIZE - 2,
+                    GRID_CELL_WIDTH - 2,
+                    GRID_CELL_HEIGHT - 2,
                     arcade.color.DIM_GRAY,
                     1,
                 )
                 arcade.draw_line(
-                    center_x - GRID_SIZE * 0.18,
+                    center_x - GRID_CELL_WIDTH * 0.18,
                     center_y,
-                    center_x + GRID_SIZE * 0.18,
+                    center_x + GRID_CELL_WIDTH * 0.18,
                     center_y,
                     arcade.color.LIGHT_GRAY,
                     1,

@@ -9,6 +9,7 @@ WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
 PLAYER_TILES_PER_SECOND = 8
+GRID_BACKGROUND_ALPHA = 70
 
 # Bottom row first. "#" tiles line up with the drawn street grid.
 STREET_TILE_ROWS = (
@@ -169,10 +170,20 @@ class GameView(arcade.View):
         self.player_grid_x = 0
         self.player_grid_y = 0
         self.player_step_timer = 0.0
+        self.background_list = arcade.SpriteList()
 
     def setup(self):
+        self.background_list = arcade.SpriteList()
         self.player_list = arcade.SpriteList()
         self.entity_list = arcade.SpriteList()
+
+        background_sprite = arcade.Sprite("grid.png")
+        background_sprite.center_x = WINDOW_WIDTH / 2
+        background_sprite.center_y = WINDOW_HEIGHT / 2
+        background_sprite.width = WINDOW_WIDTH
+        background_sprite.height = WINDOW_HEIGHT
+        background_sprite.alpha = GRID_BACKGROUND_ALPHA
+        self.background_list.append(background_sprite)
 
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
@@ -201,6 +212,7 @@ class GameView(arcade.View):
     def on_draw(self):
         self.clear()
 
+        self.background_list.draw()
         self.draw_streets()
 
         self.entity_list.draw()

@@ -5,6 +5,7 @@ import arcade
 SPRITE_SCALING_PLAYER = 0.03
 SPRITE_SCALING_ENTITY = 0.3
 ENTITY_COUNT = 4
+PLAYER_SPEED = 300
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -88,6 +89,13 @@ class MovingEntity(arcade.Sprite):
 
 
 class GameView(arcade.View):
+    def __init__(self):
+        super().__init__()
+        self.left_pressed = False
+        self.right_pressed = False
+        self.up_pressed = False
+        self.down_pressed = False
+
     def setup(self):
         self.player_list = arcade.SpriteList()
         self.entity_list = arcade.SpriteList()
@@ -103,9 +111,6 @@ class GameView(arcade.View):
         self.player_sprite.center_y = 50
 
         self.player_list.append(self.player_sprite)
-
-        self.target_x = 50
-        self.target_y = 50
 
         for _ in range(ENTITY_COUNT):
             config = random.choice(ENTITY_TYPES)
@@ -140,9 +145,25 @@ class GameView(arcade.View):
                 anchor_x="center"
             )
 
-    def on_mouse_motion(self, x, y, dx, dy):
-        self.target_x = x
-        self.target_y = y
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.W:
+            self.up_pressed = True
+        elif key == arcade.key.S:
+            self.down_pressed = True
+        elif key == arcade.key.A:
+            self.left_pressed = True
+        elif key == arcade.key.D:
+            self.right_pressed = True
+
+    def on_key_release(self, key, modifiers):
+        if key == arcade.key.W:
+            self.up_pressed = False
+        elif key == arcade.key.S:
+            self.down_pressed = False
+        elif key == arcade.key.A:
+            self.left_pressed = False
+        elif key == arcade.key.D:
+            self.right_pressed = False
 
     def on_update(self, delta_time):
         if self.game_over:
@@ -150,17 +171,25 @@ class GameView(arcade.View):
 
         self.entity_list.update(delta_time)
 
-        speed = 5
-        dx = self.target_x - self.player_sprite.center_x
-        dy = self.target_y - self.player_sprite.center_y
+        dx = 0
+        dy = 0
 
-        dist = (dx*dx + dy*dy) ** 0.5
-        if dist > 0:
-            dx /= dist
-            dy /= dist
+        if self.up_pressed:
+            dy += PLAYER_SPEED * delta_time
+        if self.down_pressed:
+            dy -= PLAYER_SPEED * delta_time
+        if self.left_pressed:
+            dx -= PLAYER_SPEED * delta_time
+        if self.right_pressed:
+            dx += PLAYER_SPEED * delta_time
 
-        self.player_sprite.center_x += dx * speed
-        self.player_sprite.center_y += dy * speed
+        self.player_sprite.center_x += dx
+        self.player_sprite.center_y += dy
+
+        self.player_sprite.left = max(0, self.player_sprite.left)
+        self.player_sprite.right = min(WINDOW_WIDTH, self.player_sprite.right)
+        self.player_sprite.bottom = max(0, self.player_sprite.bottom)
+        self.player_sprite.top = min(WINDOW_HEIGHT, self.player_sprite.top)
 
         if arcade.check_for_collision_with_list(self.player_sprite, self.entity_list):
             self.game_over = True

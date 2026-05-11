@@ -87,7 +87,7 @@ def grid_to_center(grid_x, grid_y):
 
 
 def with_alpha(color, alpha):
-    return (*color, alpha)
+    return (color.r, color.g, color.b, alpha)
 
 
 def is_street_tile(grid_x, grid_y):

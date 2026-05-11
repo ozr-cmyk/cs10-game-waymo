@@ -53,7 +53,7 @@ DIRECTION_DELTAS = {
 # Arcade uses degrees, with 0 pointing to the right and positive angles rotating counterclockwise.
 DIRECTION_ANGLES = {
     "right": {"right": 90, "up": 0, "left": 270, "down": 180},
-    "left": {"left": 0, "down": 90, "right": 180, "up": 270},
+    "left": {"left": 270, "down": 180, "right": 90, "up": 0},
 }
 
 

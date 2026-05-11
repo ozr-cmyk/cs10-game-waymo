@@ -120,8 +120,16 @@ class GameView(arcade.View):
         self.player_step_timer = 0.0
 
     def setup(self):
+        self.background_list = arcade.SpriteList()
         self.player_list = arcade.SpriteList()
         self.entity_list = arcade.SpriteList()
+
+        self.background = arcade.Sprite("grid.png")
+        self.background.center_x = WINDOW_WIDTH / 2
+        self.background.center_y = WINDOW_HEIGHT / 2
+        self.background.width = WINDOW_WIDTH
+        self.background.height = WINDOW_HEIGHT
+        self.background_list.append(self.background)
 
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
@@ -152,14 +160,7 @@ class GameView(arcade.View):
     def on_draw(self):
         self.clear()
 
-        arcade.draw_lbwh_rectangle_filled(
-            0,
-            0,
-            WINDOW_WIDTH,
-            WINDOW_HEIGHT,
-            arcade.color.DARK_GREEN,
-        )
-        self.draw_streets()
+        self.background_list.draw()
 
         self.entity_list.draw()
         self.player_list.draw()

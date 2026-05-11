@@ -152,9 +152,9 @@ class GameView(arcade.View):
     def on_draw(self):
         self.clear()
 
-        arcade.draw_rectangle_filled(
-            WINDOW_WIDTH / 2,
-            WINDOW_HEIGHT / 2,
+        arcade.draw_lbwh_rectangle_filled(
+            0,
+            0,
             WINDOW_WIDTH,
             WINDOW_HEIGHT,
             arcade.color.DARK_GREEN,
@@ -178,16 +178,18 @@ class GameView(arcade.View):
         for col in range(GRID_COLS):
             for row in range(GRID_ROWS):
                 center_x, center_y = grid_to_center(col, row)
-                arcade.draw_rectangle_filled(
-                    center_x,
-                    center_y,
+                left = center_x - (GRID_SIZE - 2) / 2
+                bottom = center_y - (GRID_SIZE - 2) / 2
+                arcade.draw_lbwh_rectangle_filled(
+                    left,
+                    bottom,
                     GRID_SIZE - 2,
                     GRID_SIZE - 2,
                     arcade.color.DARK_SLATE_GRAY,
                 )
-                arcade.draw_rectangle_outline(
-                    center_x,
-                    center_y,
+                arcade.draw_lbwh_rectangle_outline(
+                    left,
+                    bottom,
                     GRID_SIZE - 2,
                     GRID_SIZE - 2,
                     arcade.color.DIM_GRAY,

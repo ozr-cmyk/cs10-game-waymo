@@ -74,12 +74,21 @@ class MovingEntity(arcade.Sprite):
             self.change_y = 0
 
     def update(self, delta_time):
-        self.center_x += self.change_x
-        self.center_y += self.change_y
+        self.center_x += self.change_x * delta_time
+        self.center_y += self.change_y * delta_time
 
-        if self.left < 0 or self.right > WINDOW_WIDTH:
+        if self.left < 0:
+            self.left = 0
             self.change_x *= -1
-        if self.bottom < 0 or self.top > WINDOW_HEIGHT:
+        elif self.right > WINDOW_WIDTH:
+            self.right = WINDOW_WIDTH
+            self.change_x *= -1
+
+        if self.bottom < 0:
+            self.bottom = 0
+            self.change_y *= -1
+        elif self.top > WINDOW_HEIGHT:
+            self.top = WINDOW_HEIGHT
             self.change_y *= -1
 
         self.timer -= delta_time
@@ -186,10 +195,15 @@ class GameView(arcade.View):
         self.player_sprite.center_x += dx
         self.player_sprite.center_y += dy
 
-        self.player_sprite.left = max(0, self.player_sprite.left)
-        self.player_sprite.right = min(WINDOW_WIDTH, self.player_sprite.right)
-        self.player_sprite.bottom = max(0, self.player_sprite.bottom)
-        self.player_sprite.top = min(WINDOW_HEIGHT, self.player_sprite.top)
+        if self.player_sprite.left < 0:
+            self.player_sprite.left = 0
+        elif self.player_sprite.right > WINDOW_WIDTH:
+            self.player_sprite.right = WINDOW_WIDTH
+
+        if self.player_sprite.bottom < 0:
+            self.player_sprite.bottom = 0
+        elif self.player_sprite.top > WINDOW_HEIGHT:
+            self.player_sprite.top = WINDOW_HEIGHT
 
         if arcade.check_for_collision_with_list(self.player_sprite, self.entity_list):
             self.game_over = True

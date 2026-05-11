@@ -222,19 +222,26 @@ class GameView(arcade.View):
                 center_x, center_y = grid_to_center(col, row)
                 left = center_x - (GRID_CELL_WIDTH - 2) / 2
                 bottom = center_y - (GRID_CELL_HEIGHT - 2) / 2
+                if is_street_tile(col, row):
+                    fill_color = arcade.color.DARK_SLATE_GRAY
+                    outline_color = arcade.color.DIM_GRAY
+                else:
+                    fill_color = arcade.color.LIGHT_CORAL
+                    outline_color = arcade.color.DARK_RED
+
                 arcade.draw_lbwh_rectangle_filled(
                     left,
                     bottom,
                     GRID_CELL_WIDTH - 2,
                     GRID_CELL_HEIGHT - 2,
-                    arcade.color.DARK_SLATE_GRAY,
+                    fill_color,
                 )
                 arcade.draw_lbwh_rectangle_outline(
                     left,
                     bottom,
                     GRID_CELL_WIDTH - 2,
                     GRID_CELL_HEIGHT - 2,
-                    arcade.color.DIM_GRAY,
+                    outline_color,
                     1,
                 )
                 arcade.draw_line(
@@ -242,7 +249,7 @@ class GameView(arcade.View):
                     center_y,
                     center_x + GRID_CELL_WIDTH * 0.18,
                     center_y,
-                    arcade.color.LIGHT_GRAY,
+                    arcade.color.LIGHT_GRAY if is_street_tile(col, row) else arcade.color.DARK_RED,
                     1,
                 )
 

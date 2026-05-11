@@ -10,6 +10,10 @@ WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
 PLAYER_TILES_PER_SECOND = 8
 GRID_BACKGROUND_ALPHA = 160
+STREET_FILL_ALPHA = 165
+BLOCK_FILL_ALPHA = 195
+STREET_OUTLINE_ALPHA = 180
+BLOCK_OUTLINE_ALPHA = 210
 
 # Bottom row first. "#" tiles line up with the drawn street grid.
 STREET_TILE_ROWS = (
@@ -80,6 +84,10 @@ def grid_to_center(grid_x, grid_y):
         grid_x * GRID_CELL_WIDTH + GRID_CELL_WIDTH / 2,
         grid_y * GRID_CELL_HEIGHT + GRID_CELL_HEIGHT / 2,
     )
+
+
+def with_alpha(color, alpha):
+    return (*color, alpha)
 
 
 def is_street_tile(grid_x, grid_y):
@@ -235,11 +243,11 @@ class GameView(arcade.View):
                 left = center_x - (GRID_CELL_WIDTH - 2) / 2
                 bottom = center_y - (GRID_CELL_HEIGHT - 2) / 2
                 if is_street_tile(col, row):
-                    fill_color = arcade.color.DARK_SLATE_GRAY
-                    outline_color = arcade.color.DIM_GRAY
+                    fill_color = with_alpha(arcade.color.DARK_SLATE_GRAY, STREET_FILL_ALPHA)
+                    outline_color = with_alpha(arcade.color.DIM_GRAY, STREET_OUTLINE_ALPHA)
                 else:
-                    fill_color = arcade.color.LIGHT_CORAL
-                    outline_color = arcade.color.DARK_RED
+                    fill_color = with_alpha(arcade.color.LIGHT_CORAL, BLOCK_FILL_ALPHA)
+                    outline_color = with_alpha(arcade.color.DARK_RED, BLOCK_OUTLINE_ALPHA)
 
                 arcade.draw_lbwh_rectangle_filled(
                     left,

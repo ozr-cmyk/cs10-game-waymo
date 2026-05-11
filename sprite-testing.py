@@ -13,6 +13,35 @@ GRID_COLS = WINDOW_WIDTH // GRID_SIZE
 GRID_ROWS = WINDOW_HEIGHT // GRID_SIZE
 PLAYER_TILES_PER_SECOND = 8
 
+# Bottom row first. "#" tiles line up with the streets in grid.png.
+STREET_TILE_ROWS = (
+    "###############.#####.....######",
+    "..#.....#............#.....#....",
+    ".##.....#............#.....#....",
+    ".##.....#.#..#.......###########",
+    "############.#.......#.....#....",
+    "..#.....#..##..#...........#....",
+    "........#.###..#...........#....",
+    "#...######...################...",
+    "........#......#.....#.....#....",
+    "..#.....#......#.....#.....#....",
+    "#.#..###..######################",
+    "..#............#.....#.....#....",
+    "..#............#.....#..........",
+    ".#####################...#######",
+    "..#.....##.....#.....#..........",
+    "..#......#.....#.....#.........#",
+    "..#...#.##.....##########.######",
+    "##########.....#................",
+)
+
+DIRECTION_DELTAS = {
+    "up": (0, 1),
+    "down": (0, -1),
+    "left": (-1, 0),
+    "right": (1, 0),
+}
+
 
 # --- Variants (SAFE VERSION) ---
 CAR = {
@@ -50,6 +79,34 @@ def grid_to_center(grid_x, grid_y):
     )
 
 
+def is_street_tile(grid_x, grid_y):
+    if not (0 <= grid_x < GRID_COLS and 0 <= grid_y < GRID_ROWS):
+        return False
+    return STREET_TILE_ROWS[grid_y][grid_x] == "#"
+
+
+def random_street_tile():
+    street_tiles = [
+        (grid_x, grid_y)
+        for grid_y, row in enumerate(STREET_TILE_ROWS)
+        for grid_x, tile in enumerate(row)
+        if tile == "#"
+    ]
+    return random.choice(street_tiles)
+
+
+def street_neighbors(grid_x, grid_y):
+    neighbors = []
+
+    for direction, (dx, dy) in DIRECTION_DELTAS.items():
+        next_x = grid_x + dx
+        next_y = grid_y + dy
+        if is_street_tile(next_x, next_y):
+            neighbors.append((direction, next_x, next_y))
+
+    return neighbors
+
+
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
         super().__init__(config["texture"], SPRITE_SCALING_ENTITY)
@@ -73,28 +130,20 @@ class MovingEntity(arcade.Sprite):
         self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
 
     def step(self):
-        next_x = self.grid_x
-        next_y = self.grid_y
+        dx, dy = DIRECTION_DELTAS[self.direction]
+        next_x = self.grid_x + dx
+        next_y = self.grid_y + dy
 
-        if self.direction == "up":
-            next_y += 1
-        elif self.direction == "down":
-            next_y -= 1
-        elif self.direction == "left":
-            next_x -= 1
-        else:
-            next_x += 1
+        if not is_street_tile(next_x, next_y):
+            valid_neighbors = street_neighbors(self.grid_x, self.grid_y)
+            if not valid_neighbors:
+                self.sync_to_grid()
+                return
 
-        if next_x < 0 or next_x >= GRID_COLS:
-            self.direction = "left" if self.direction == "right" else "right"
-            next_x = self.grid_x + (-1 if self.direction == "left" else 1)
+            self.direction, next_x, next_y = random.choice(valid_neighbors)
 
-        if next_y < 0 or next_y >= GRID_ROWS:
-            self.direction = "down" if self.direction == "up" else "up"
-            next_y = self.grid_y + (-1 if self.direction == "down" else 1)
-
-        self.grid_x = max(0, min(GRID_COLS - 1, next_x))
-        self.grid_y = max(0, min(GRID_ROWS - 1, next_y))
+        self.grid_x = next_x
+        self.grid_y = next_y
         self.sync_to_grid()
 
     def update(self, delta_time):
@@ -136,8 +185,7 @@ class GameView(arcade.View):
             SPRITE_SCALING_PLAYER
         )
 
-        self.player_grid_x = 1
-        self.player_grid_y = 1
+        self.player_grid_x, self.player_grid_y = random_street_tile()
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
             self.player_grid_x,
             self.player_grid_y,
@@ -149,8 +197,7 @@ class GameView(arcade.View):
             config = random.choice(ENTITY_TYPES)
 
             entity = MovingEntity(config)
-            entity.grid_x = random.randrange(GRID_COLS)
-            entity.grid_y = random.randrange(GRID_ROWS)
+            entity.grid_x, entity.grid_y = random_street_tile()
             entity.sync_to_grid()
 
             self.entity_list.append(entity)
@@ -226,8 +273,14 @@ class GameView(arcade.View):
             self.right_pressed = False
 
     def move_player(self, dx, dy):
-        self.player_grid_x = max(0, min(GRID_COLS - 1, self.player_grid_x + dx))
-        self.player_grid_y = max(0, min(GRID_ROWS - 1, self.player_grid_y + dy))
+        next_x = self.player_grid_x + dx
+        next_y = self.player_grid_y + dy
+
+        if not is_street_tile(next_x, next_y):
+            return
+
+        self.player_grid_x = next_x
+        self.player_grid_y = next_y
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
             self.player_grid_x,
             self.player_grid_y,

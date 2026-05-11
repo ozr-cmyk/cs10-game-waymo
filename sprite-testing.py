@@ -50,31 +50,41 @@ DIRECTION_DELTAS = {
     "right": (1, 0),
 }
 
+# Arcade uses degrees, with 0 pointing to the right and positive angles rotating counterclockwise.
+DIRECTION_ANGLES = {
+    "right": {"right": 0, "up": 90, "left": 180, "down": 270},
+    "left": {"left": 0, "down": 90, "right": 180, "up": 270},
+}
+
 
 # --- Variants (SAFE VERSION) ---
 CAR = {
     "name": "car",
     "texture": "car.png",
-    "speed": 4
+    "speed": 4,
+    "facing": "left",
 }
 
 CYCLIST = {
     "name": "cyclist",
     "texture": "cyclist.png",
-    "speed": 3
+    "speed": 3,
+    "facing": "right",
 }
 
 PEDESTRIAN = {
     "name": "pedestrian",
     "texture": "pedestrian.png",
-    "speed": 2
+    "speed": 2,
+    "facing": "right",
 }
 
 CAT = {
     "name": "cat",
     "texture": "cat.png",
     "speed_min": 2,
-    "speed_max": 4
+    "speed_max": 4,
+    "facing": "left",
 }
 
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
@@ -126,16 +136,22 @@ def street_neighbors(grid_x, grid_y):
     return neighbors
 
 
+def direction_to_angle(direction, facing):
+    return DIRECTION_ANGLES[facing][direction]
+
+
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
         super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
 
         self.config = config
         self.name = config["name"]
+        self.facing = config["facing"]
         self.grid_x = 0
         self.grid_y = 0
         self.direction = random.choice(["up", "down", "left", "right"])
         self.step_timer = 0.0
+        self.angle = direction_to_angle(self.direction, self.facing)
 
     def get_speed(self):
         if self.name == "cat":
@@ -144,6 +160,7 @@ class MovingEntity(arcade.Sprite):
 
     def set_direction(self):
         self.direction = random.choice(["up", "down", "left", "right"])
+        self.angle = direction_to_angle(self.direction, self.facing)
 
     def sync_to_grid(self):
         self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
@@ -163,6 +180,7 @@ class MovingEntity(arcade.Sprite):
 
         self.grid_x = next_x
         self.grid_y = next_y
+        self.angle = direction_to_angle(self.direction, self.facing)
         self.sync_to_grid()
 
     def update(self, delta_time):
@@ -207,6 +225,7 @@ class GameView(arcade.View):
             self.player_grid_x,
             self.player_grid_y,
         )
+        self.player_sprite.angle = direction_to_angle("left", "left")
 
         self.player_list.append(self.player_sprite)
 
@@ -305,6 +324,15 @@ class GameView(arcade.View):
 
         self.player_grid_x = next_x
         self.player_grid_y = next_y
+        if dx > 0:
+            direction = "right"
+        elif dx < 0:
+            direction = "left"
+        elif dy > 0:
+            direction = "up"
+        else:
+            direction = "down"
+        self.player_sprite.angle = direction_to_angle(direction, "left")
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
             self.player_grid_x,
             self.player_grid_y,

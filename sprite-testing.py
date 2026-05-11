@@ -198,7 +198,9 @@ class GameView(arcade.View):
             SPRITE_SCALING_PLAYER
         )
 
-        self.player_grid_x, self.player_grid_y = random_street_tile()
+        # Always start the player in the bottom-left street tile.
+        self.player_grid_x = 0
+        self.player_grid_y = 0
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
             self.player_grid_x,
             self.player_grid_y,

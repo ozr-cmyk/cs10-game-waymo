@@ -5,14 +5,13 @@ import arcade
 SPRITE_SCALING_PLAYER = 0.03
 SPRITE_SCALING_ENTITY = 0.3
 ENTITY_COUNT = 4
+WINDOW_WIDTH = 1280
+WINDOW_HEIGHT = 720
+WINDOW_TITLE = "Stable Traffic Variants Game"
 GRID_SIZE = 40
 GRID_COLS = WINDOW_WIDTH // GRID_SIZE
 GRID_ROWS = WINDOW_HEIGHT // GRID_SIZE
 PLAYER_TILES_PER_SECOND = 8
-
-WINDOW_WIDTH = 1280
-WINDOW_HEIGHT = 720
-WINDOW_TITLE = "Stable Traffic Variants Game"
 
 
 # --- Variants (SAFE VERSION) ---
@@ -124,8 +123,6 @@ class GameView(arcade.View):
         self.player_list = arcade.SpriteList()
         self.entity_list = arcade.SpriteList()
 
-        self.background = arcade.load_texture("bgimage.png")
-
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
             SPRITE_SCALING_PLAYER
@@ -155,11 +152,14 @@ class GameView(arcade.View):
     def on_draw(self):
         self.clear()
 
-        arcade.draw_texture_rect(
-            self.background,
-            arcade.rect.XYWH(WINDOW_WIDTH/2, WINDOW_HEIGHT/2,
-                             WINDOW_WIDTH, WINDOW_HEIGHT)
+        arcade.draw_rectangle_filled(
+            WINDOW_WIDTH / 2,
+            WINDOW_HEIGHT / 2,
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+            arcade.color.DARK_GREEN,
         )
+        self.draw_streets()
 
         self.entity_list.draw()
         self.player_list.draw()
@@ -173,6 +173,34 @@ class GameView(arcade.View):
                 40,
                 anchor_x="center"
             )
+
+    def draw_streets(self):
+        for col in range(GRID_COLS):
+            for row in range(GRID_ROWS):
+                center_x, center_y = grid_to_center(col, row)
+                arcade.draw_rectangle_filled(
+                    center_x,
+                    center_y,
+                    GRID_SIZE - 2,
+                    GRID_SIZE - 2,
+                    arcade.color.DARK_SLATE_GRAY,
+                )
+                arcade.draw_rectangle_outline(
+                    center_x,
+                    center_y,
+                    GRID_SIZE - 2,
+                    GRID_SIZE - 2,
+                    arcade.color.DIM_GRAY,
+                    1,
+                )
+                arcade.draw_line(
+                    center_x - GRID_SIZE * 0.18,
+                    center_y,
+                    center_x + GRID_SIZE * 0.18,
+                    center_y,
+                    arcade.color.LIGHT_GRAY,
+                    1,
+                )
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W:
@@ -218,6 +246,10 @@ class GameView(arcade.View):
             return
 
         self.entity_list.update(delta_time)
+
+        if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
+            self.player_step_timer = 0.0
+            return
 
         self.player_step_timer += delta_time
         player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND

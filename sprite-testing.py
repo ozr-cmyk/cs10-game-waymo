@@ -5,7 +5,10 @@ import arcade
 SPRITE_SCALING_PLAYER = 0.03
 SPRITE_SCALING_ENTITY = 0.3
 ENTITY_COUNT = 4
-PLAYER_SPEED = 420
+GRID_SIZE = 40
+GRID_COLS = WINDOW_WIDTH // GRID_SIZE
+GRID_ROWS = WINDOW_HEIGHT // GRID_SIZE
+PLAYER_TILES_PER_SECOND = 8
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -16,29 +19,36 @@ WINDOW_TITLE = "Stable Traffic Variants Game"
 CAR = {
     "name": "car",
     "texture": "car.png",
-    "speed": 240
+    "speed": 4
 }
 
 CYCLIST = {
     "name": "cyclist",
     "texture": "cyclist.png",
-    "speed": 180
+    "speed": 3
 }
 
 PEDESTRIAN = {
     "name": "pedestrian",
     "texture": "pedestrian.png",
-    "speed": 120
+    "speed": 2
 }
 
 CAT = {
     "name": "cat",
     "texture": "cat.png",
-    "speed_min": 120,
-    "speed_max": 220
+    "speed_min": 2,
+    "speed_max": 4
 }
 
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
+
+
+def grid_to_center(grid_x, grid_y):
+    return (
+        grid_x * GRID_SIZE + GRID_SIZE / 2,
+        grid_y * GRID_SIZE + GRID_SIZE / 2,
+    )
 
 
 class MovingEntity(arcade.Sprite):
@@ -47,9 +57,10 @@ class MovingEntity(arcade.Sprite):
 
         self.config = config
         self.name = config["name"]
-
-        self.timer = random.uniform(1.0, 3.0)
-        self.set_direction()
+        self.grid_x = 0
+        self.grid_y = 0
+        self.direction = random.choice(["up", "down", "left", "right"])
+        self.step_timer = 0.0
 
     def get_speed(self):
         if self.name == "cat":
@@ -57,44 +68,45 @@ class MovingEntity(arcade.Sprite):
         return self.config["speed"]
 
     def set_direction(self):
-        speed = self.get_speed()
-        direction = random.choice(["up", "down", "left", "right"])
+        self.direction = random.choice(["up", "down", "left", "right"])
 
-        if direction == "up":
-            self.change_x = 0
-            self.change_y = speed
-        elif direction == "down":
-            self.change_x = 0
-            self.change_y = -speed
-        elif direction == "left":
-            self.change_x = -speed
-            self.change_y = 0
+    def sync_to_grid(self):
+        self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
+
+    def step(self):
+        next_x = self.grid_x
+        next_y = self.grid_y
+
+        if self.direction == "up":
+            next_y += 1
+        elif self.direction == "down":
+            next_y -= 1
+        elif self.direction == "left":
+            next_x -= 1
         else:
-            self.change_x = speed
-            self.change_y = 0
+            next_x += 1
+
+        if next_x < 0 or next_x >= GRID_COLS:
+            self.direction = "left" if self.direction == "right" else "right"
+            next_x = self.grid_x + (-1 if self.direction == "left" else 1)
+
+        if next_y < 0 or next_y >= GRID_ROWS:
+            self.direction = "down" if self.direction == "up" else "up"
+            next_y = self.grid_y + (-1 if self.direction == "down" else 1)
+
+        self.grid_x = max(0, min(GRID_COLS - 1, next_x))
+        self.grid_y = max(0, min(GRID_ROWS - 1, next_y))
+        self.sync_to_grid()
 
     def update(self, delta_time):
-        self.center_x += self.change_x * delta_time
-        self.center_y += self.change_y * delta_time
+        self.step_timer += delta_time
+        step_interval = 1.0 / self.get_speed()
 
-        if self.left < 0:
-            self.left = 0
-            self.change_x *= -1
-        elif self.right > WINDOW_WIDTH:
-            self.right = WINDOW_WIDTH
-            self.change_x *= -1
+        while self.step_timer >= step_interval:
+            self.step_timer -= step_interval
+            self.step()
 
-        if self.bottom < 0:
-            self.bottom = 0
-            self.change_y *= -1
-        elif self.top > WINDOW_HEIGHT:
-            self.top = WINDOW_HEIGHT
-            self.change_y *= -1
-
-        self.timer -= delta_time
-        if self.timer <= 0:
-            self.set_direction()
-            self.timer = random.uniform(1.0, 3.0)
+        self.sync_to_grid()
 
 
 class GameView(arcade.View):
@@ -104,6 +116,9 @@ class GameView(arcade.View):
         self.right_pressed = False
         self.up_pressed = False
         self.down_pressed = False
+        self.player_grid_x = 0
+        self.player_grid_y = 0
+        self.player_step_timer = 0.0
 
     def setup(self):
         self.player_list = arcade.SpriteList()
@@ -116,8 +131,12 @@ class GameView(arcade.View):
             SPRITE_SCALING_PLAYER
         )
 
-        self.player_sprite.center_x = 50
-        self.player_sprite.center_y = 50
+        self.player_grid_x = 1
+        self.player_grid_y = 1
+        self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
+            self.player_grid_x,
+            self.player_grid_y,
+        )
 
         self.player_list.append(self.player_sprite)
 
@@ -125,8 +144,9 @@ class GameView(arcade.View):
             config = random.choice(ENTITY_TYPES)
 
             entity = MovingEntity(config)
-            entity.center_x = random.randrange(WINDOW_WIDTH)
-            entity.center_y = random.randrange(WINDOW_HEIGHT)
+            entity.grid_x = random.randrange(GRID_COLS)
+            entity.grid_y = random.randrange(GRID_ROWS)
+            entity.sync_to_grid()
 
             self.entity_list.append(entity)
 
@@ -174,36 +194,39 @@ class GameView(arcade.View):
         elif key == arcade.key.D:
             self.right_pressed = False
 
+    def move_player(self, dx, dy):
+        self.player_grid_x = max(0, min(GRID_COLS - 1, self.player_grid_x + dx))
+        self.player_grid_y = max(0, min(GRID_ROWS - 1, self.player_grid_y + dy))
+        self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
+            self.player_grid_x,
+            self.player_grid_y,
+        )
+
+    def get_player_direction(self):
+        if self.up_pressed:
+            return 0, 1
+        if self.down_pressed:
+            return 0, -1
+        if self.left_pressed:
+            return -1, 0
+        if self.right_pressed:
+            return 1, 0
+        return 0, 0
+
     def on_update(self, delta_time):
         if self.game_over:
             return
 
         self.entity_list.update(delta_time)
 
-        dx = 0
-        dy = 0
+        self.player_step_timer += delta_time
+        player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND
+        move_x, move_y = self.get_player_direction()
 
-        if self.up_pressed:
-            dy += PLAYER_SPEED * delta_time
-        if self.down_pressed:
-            dy -= PLAYER_SPEED * delta_time
-        if self.left_pressed:
-            dx -= PLAYER_SPEED * delta_time
-        if self.right_pressed:
-            dx += PLAYER_SPEED * delta_time
-
-        self.player_sprite.center_x += dx
-        self.player_sprite.center_y += dy
-
-        if self.player_sprite.left < 0:
-            self.player_sprite.left = 0
-        elif self.player_sprite.right > WINDOW_WIDTH:
-            self.player_sprite.right = WINDOW_WIDTH
-
-        if self.player_sprite.bottom < 0:
-            self.player_sprite.bottom = 0
-        elif self.player_sprite.top > WINDOW_HEIGHT:
-            self.player_sprite.top = WINDOW_HEIGHT
+        while self.player_step_timer >= player_step_interval and (move_x or move_y):
+            self.player_step_timer -= player_step_interval
+            self.move_player(move_x, move_y)
+            move_x, move_y = self.get_player_direction()
 
         if arcade.check_for_collision_with_list(self.player_sprite, self.entity_list):
             self.game_over = True

@@ -1,9 +1,10 @@
 import random
+from functools import lru_cache
+
 import arcade
+from PIL import Image
 
 # --- Constants ---
-SPRITE_SCALING_PLAYER = 0.03
-SPRITE_SCALING_ENTITY = 0.3
 ENTITY_COUNT = 4
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -40,6 +41,7 @@ GRID_COLS = len(STREET_TILE_ROWS[0])
 GRID_ROWS = len(STREET_TILE_ROWS)
 GRID_CELL_WIDTH = WINDOW_WIDTH / GRID_COLS
 GRID_CELL_HEIGHT = WINDOW_HEIGHT / GRID_ROWS
+TWO_TILE_SIZE = min(GRID_CELL_WIDTH, GRID_CELL_HEIGHT) * 2
 
 DIRECTION_DELTAS = {
     "up": (0, 1),
@@ -89,6 +91,13 @@ def with_alpha(color, alpha):
     return (color.r, color.g, color.b, alpha)
 
 
+@lru_cache(maxsize=None)
+def sprite_scale_to_two_tiles(texture_path):
+    with Image.open(texture_path) as image:
+        widest_side = max(image.size)
+    return TWO_TILE_SIZE / widest_side
+
+
 def is_street_tile(grid_x, grid_y):
     if not (0 <= grid_x < GRID_COLS and 0 <= grid_y < GRID_ROWS):
         return False
@@ -119,7 +128,7 @@ def street_neighbors(grid_x, grid_y):
 
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
-        super().__init__(config["texture"], SPRITE_SCALING_ENTITY)
+        super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
 
         self.config = config
         self.name = config["name"]
@@ -188,7 +197,7 @@ class GameView(arcade.View):
 
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
-            SPRITE_SCALING_PLAYER
+            sprite_scale_to_two_tiles("waymo.avif")
         )
 
         # Always start the player in the bottom-left street tile.

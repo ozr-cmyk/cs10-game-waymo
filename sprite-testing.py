@@ -9,7 +9,7 @@ WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
 PLAYER_TILES_PER_SECOND = 8
-GRID_BACKGROUND_ALPHA = 70
+GRID_BACKGROUND_ALPHA = 160
 
 # Bottom row first. "#" tiles line up with the drawn street grid.
 STREET_TILE_ROWS = (

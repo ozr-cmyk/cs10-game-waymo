@@ -5,7 +5,7 @@ import arcade
 SPRITE_SCALING_PLAYER = 0.03
 SPRITE_SCALING_ENTITY = 0.3
 ENTITY_COUNT = 4
-PLAYER_SPEED = 300
+PLAYER_SPEED = 420
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
@@ -16,26 +16,26 @@ WINDOW_TITLE = "Stable Traffic Variants Game"
 CAR = {
     "name": "car",
     "texture": "car.png",
-    "speed": 6
+    "speed": 240
 }
 
 CYCLIST = {
     "name": "cyclist",
     "texture": "cyclist.png",
-    "speed": 4
+    "speed": 180
 }
 
 PEDESTRIAN = {
     "name": "pedestrian",
     "texture": "pedestrian.png",
-    "speed": 2
+    "speed": 120
 }
 
 CAT = {
     "name": "cat",
     "texture": "cat.png",
-    "speed_min": 2,
-    "speed_max": 4
+    "speed_min": 120,
+    "speed_max": 220
 }
 
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]

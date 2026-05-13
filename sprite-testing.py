@@ -97,7 +97,7 @@ CAT = {
 
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
 RED_LIGHT_ENTITIES = {"car", "cyclist", "pedestrian"}
-TURN_WEIGHT = 1.5
+TURN_WEIGHT = 2.0
 
 
 def grid_to_center(grid_x, grid_y):
@@ -161,7 +161,7 @@ def direction_to_angle(direction, facing):
 
 
 def choose_direction_with_turn_bias(current_direction, options):
-    """Prefer turning over continuing straight by 50% when both are possible."""
+    """Prefer turning over continuing straight by 100% when both are possible."""
     if len(options) <= 1:
         return options[0]
 

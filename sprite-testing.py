@@ -282,7 +282,7 @@ class GameView(arcade.View):
         self.player_grid_x = 0
         self.player_grid_y = 0
         self.player_step_timer = 0.0
-        self.stoplight_timer = 0.0
+        self.stoplight_timer = random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2)
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)

@@ -96,7 +96,7 @@ CAT = {
 }
 
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
-RED_LIGHT_ENTITIES = {"car", "cyclist", "pedestrian", "cat"}
+RED_LIGHT_ENTITIES = {"car", "cyclist", "pedestrian"}
 
 
 def grid_to_center(grid_x, grid_y):

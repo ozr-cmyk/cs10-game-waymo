@@ -89,6 +89,7 @@ CAT = {
 }
 
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
+RED_LIGHT_ENTITIES = {"car", "cyclist", "pedestrian", "cat"}
 
 
 def grid_to_center(grid_x, grid_y):
@@ -233,6 +234,18 @@ def draw_stoplights_every_third_intersection(stoplights, timer):
         draw_stoplight(stoplight["grid_x"], stoplight["grid_y"], state=state)
 
 
+def build_stoplight_lookup(stoplights):
+    return {(stoplight["grid_x"], stoplight["grid_y"]): stoplight for stoplight in stoplights}
+
+
+def stoplight_state_for_tile(grid_x, grid_y, stoplight_lookup, timer):
+    stoplight = stoplight_lookup.get((grid_x, grid_y))
+    if stoplight is None:
+        return None
+
+    return "green" if int((timer + stoplight["phase_offset"]) / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
+
+
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
         super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
@@ -258,10 +271,27 @@ class MovingEntity(arcade.Sprite):
     def sync_to_grid(self):
         self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
 
-    def step(self):
+    def step(self, stoplight_lookup=None, stoplight_timer=None):
         dx, dy = DIRECTION_DELTAS[self.direction]
         next_x = self.grid_x + dx
         next_y = self.grid_y + dy
+
+        if stoplight_lookup is not None and stoplight_timer is not None and self.name in RED_LIGHT_ENTITIES:
+            current_state = stoplight_state_for_tile(
+                self.grid_x,
+                self.grid_y,
+                stoplight_lookup,
+                stoplight_timer,
+            )
+            next_state = stoplight_state_for_tile(
+                next_x,
+                next_y,
+                stoplight_lookup,
+                stoplight_timer,
+            )
+            if current_state == "red" or next_state == "red":
+                self.sync_to_grid()
+                return
 
         if not is_street_tile(next_x, next_y):
             valid_neighbors = street_neighbors(self.grid_x, self.grid_y)
@@ -276,13 +306,13 @@ class MovingEntity(arcade.Sprite):
         self.angle = direction_to_angle(self.direction, self.facing)
         self.sync_to_grid()
 
-    def update(self, delta_time):
+    def update(self, delta_time, stoplight_lookup=None, stoplight_timer=None):
         self.step_timer += delta_time
         step_interval = 1.0 / self.get_speed()
 
         while self.step_timer >= step_interval:
             self.step_timer -= step_interval
-            self.step()
+            self.step(stoplight_lookup, stoplight_timer)
 
         self.sync_to_grid()
 
@@ -333,6 +363,7 @@ class GameView(arcade.View):
             self.entity_list.append(entity)
 
         self.stoplights = build_stoplights()
+        self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
         self.game_over = False
 
     def on_draw(self):
@@ -450,7 +481,8 @@ class GameView(arcade.View):
             return
 
         self.stoplight_timer += delta_time
-        self.entity_list.update(delta_time)
+        for entity in self.entity_list:
+            entity.update(delta_time, self.stoplight_lookup, self.stoplight_timer)
 
         if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
             self.player_step_timer = 0.0

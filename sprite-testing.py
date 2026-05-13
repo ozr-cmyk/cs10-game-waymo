@@ -10,6 +10,7 @@ WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
 PLAYER_TILES_PER_SECOND = 8
+STOPLIGHT_PHASE_SECONDS = 45.0
 STREET_FILL_ALPHA = 165
 BLOCK_FILL_ALPHA = 195
 STREET_OUTLINE_ALPHA = 180
@@ -165,7 +166,6 @@ def draw_stoplight(grid_x, grid_y, state="red"):
     inactive_color = arcade.color.DIM_GRAY
     active_colors = {
         "red": arcade.color.RED,
-        "yellow": arcade.color.GOLD,
         "green": arcade.color.GREEN,
     }
 
@@ -202,10 +202,9 @@ def draw_stoplight(grid_x, grid_y, state="red"):
         )
 
 
-def draw_stoplights_every_third_intersection():
+def draw_stoplights_every_third_intersection(state="red"):
     """Place stoplights on every third intersection tile."""
     intersection_count = 0
-    light_states = ("red", "yellow", "green")
 
     for grid_y in range(GRID_ROWS):
         for grid_x in range(GRID_COLS):
@@ -213,7 +212,6 @@ def draw_stoplights_every_third_intersection():
                 continue
 
             if intersection_count % 3 == 0:
-                state = light_states[(intersection_count // 3) % len(light_states)]
                 draw_stoplight(grid_x, grid_y, state=state)
 
             intersection_count += 1
@@ -284,6 +282,7 @@ class GameView(arcade.View):
         self.player_grid_x = 0
         self.player_grid_y = 0
         self.player_step_timer = 0.0
+        self.stoplight_timer = 0.0
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)
@@ -323,7 +322,8 @@ class GameView(arcade.View):
         self.clear()
 
         self.draw_streets()
-        draw_stoplights_every_third_intersection()
+        stoplight_state = "green" if int(self.stoplight_timer / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
+        draw_stoplights_every_third_intersection(state=stoplight_state)
 
         self.entity_list.draw()
         self.player_list.draw()
@@ -433,6 +433,7 @@ class GameView(arcade.View):
         if self.game_over:
             return
 
+        self.stoplight_timer += delta_time
         self.entity_list.update(delta_time)
 
         if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):

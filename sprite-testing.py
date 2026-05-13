@@ -202,8 +202,9 @@ def draw_stoplight(grid_x, grid_y, state="red"):
         )
 
 
-def draw_stoplights_every_third_intersection(state="red"):
-    """Place stoplights on every third intersection tile."""
+def build_stoplights():
+    """Return the street intersections that should get stoplights."""
+    stoplights = []
     intersection_count = 0
 
     for grid_y in range(GRID_ROWS):
@@ -212,9 +213,24 @@ def draw_stoplights_every_third_intersection(state="red"):
                 continue
 
             if intersection_count % 3 == 0:
-                draw_stoplight(grid_x, grid_y, state=state)
+                stoplights.append(
+                    {
+                        "grid_x": grid_x,
+                        "grid_y": grid_y,
+                        "phase_offset": random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2),
+                    }
+                )
 
             intersection_count += 1
+
+    return stoplights
+
+
+def draw_stoplights_every_third_intersection(stoplights, timer):
+    """Place stoplights on every third intersection tile."""
+    for stoplight in stoplights:
+        state = "green" if int((timer + stoplight["phase_offset"]) / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
+        draw_stoplight(stoplight["grid_x"], stoplight["grid_y"], state=state)
 
 
 class MovingEntity(arcade.Sprite):
@@ -316,14 +332,14 @@ class GameView(arcade.View):
 
             self.entity_list.append(entity)
 
+        self.stoplights = build_stoplights()
         self.game_over = False
 
     def on_draw(self):
         self.clear()
 
         self.draw_streets()
-        stoplight_state = "green" if int(self.stoplight_timer / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
-        draw_stoplights_every_third_intersection(state=stoplight_state)
+        draw_stoplights_every_third_intersection(self.stoplights, self.stoplight_timer)
 
         self.entity_list.draw()
         self.player_list.draw()

@@ -140,6 +140,54 @@ def direction_to_angle(direction, facing):
     return DIRECTION_ANGLES[facing][direction]
 
 
+def draw_stoplight(grid_x, grid_y, state="red"):
+    """Draw a simple stoplight on top of the street grid."""
+    center_x, center_y = grid_to_center(grid_x, grid_y)
+
+    pole_height = GRID_CELL_HEIGHT * 1.8
+    pole_width = GRID_CELL_WIDTH * 0.08
+    housing_width = GRID_CELL_WIDTH * 0.32
+    housing_height = GRID_CELL_HEIGHT * 0.95
+    light_radius = min(GRID_CELL_WIDTH, GRID_CELL_HEIGHT) * 0.11
+
+    pole_color = arcade.color.DARK_SLATE_GRAY
+    housing_color = arcade.color.BLACK
+    inactive_color = arcade.color.DIM_GRAY
+    active_colors = {
+        "red": arcade.color.RED,
+        "yellow": arcade.color.GOLD,
+        "green": arcade.color.GREEN,
+    }
+    active_color = active_colors.get(state, arcade.color.RED)
+
+    arcade.draw_rectangle_filled(
+        center_x,
+        center_y - GRID_CELL_HEIGHT * 0.25,
+        pole_width,
+        pole_height,
+        pole_color,
+    )
+    arcade.draw_rectangle_filled(
+        center_x,
+        center_y + GRID_CELL_HEIGHT * 0.35,
+        housing_width,
+        housing_height,
+        housing_color,
+    )
+
+    light_offsets = (0.22, 0.0, -0.22)
+    light_states = ("red", "yellow", "green")
+
+    for offset, light_state in zip(light_offsets, light_states):
+        light_color = active_colors[light_state] if light_state == state else inactive_color
+        arcade.draw_circle_filled(
+            center_x,
+            center_y + GRID_CELL_HEIGHT * 0.35 + (housing_height * offset),
+            light_radius,
+            light_color,
+        )
+
+
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
         super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
@@ -244,6 +292,7 @@ class GameView(arcade.View):
         self.clear()
 
         self.draw_streets()
+        draw_stoplight(4, 13, state="red")
 
         self.entity_list.draw()
         self.player_list.draw()

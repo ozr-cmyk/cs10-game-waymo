@@ -57,6 +57,13 @@ DIRECTION_ANGLES = {
     "left": {"left": 270, "down": 180, "right": 90, "up": 0},
 }
 
+OPPOSITE_DIRECTION = {
+    "up": "down",
+    "down": "up",
+    "left": "right",
+    "right": "left",
+}
+
 
 # --- Variants (SAFE VERSION) ---
 CAR = {
@@ -282,13 +289,39 @@ class MovingEntity(arcade.Sprite):
         self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
 
     def step(self, occupied_tiles=None, stoplight_lookup=None, stoplight_timer=None):
+        blocked_tiles = set(occupied_tiles or ())
+        blocked_tiles.discard((self.grid_x, self.grid_y))
+
         dx, dy = DIRECTION_DELTAS[self.direction]
         next_x = self.grid_x + dx
         next_y = self.grid_y + dy
 
-        if occupied_tiles is not None and (next_x, next_y) in occupied_tiles:
-            self.sync_to_grid()
-            return
+        if is_street_tile(next_x, next_y) and (next_x, next_y) not in blocked_tiles:
+            candidate_direction = self.direction
+            candidate_x = next_x
+            candidate_y = next_y
+        else:
+            valid_neighbors = [
+                (direction, neighbor_x, neighbor_y)
+                for direction, neighbor_x, neighbor_y in street_neighbors(self.grid_x, self.grid_y)
+                if (neighbor_x, neighbor_y) not in blocked_tiles
+                and direction != OPPOSITE_DIRECTION[self.direction]
+            ]
+
+            if valid_neighbors:
+                candidate_direction, candidate_x, candidate_y = random.choice(valid_neighbors)
+            else:
+                reverse_direction = OPPOSITE_DIRECTION[self.direction]
+                reverse_dx, reverse_dy = DIRECTION_DELTAS[reverse_direction]
+                reverse_x = self.grid_x + reverse_dx
+                reverse_y = self.grid_y + reverse_dy
+                if is_street_tile(reverse_x, reverse_y) and (reverse_x, reverse_y) not in blocked_tiles:
+                    candidate_direction = reverse_direction
+                    candidate_x = reverse_x
+                    candidate_y = reverse_y
+                else:
+                    self.sync_to_grid()
+                    return
 
         if stoplight_lookup is not None and stoplight_timer is not None and self.name in RED_LIGHT_ENTITIES:
             current_state = stoplight_state_for_tile(
@@ -298,8 +331,8 @@ class MovingEntity(arcade.Sprite):
                 stoplight_timer,
             )
             next_state = stoplight_state_for_tile(
-                next_x,
-                next_y,
+                candidate_x,
+                candidate_y,
                 stoplight_lookup,
                 stoplight_timer,
             )
@@ -307,24 +340,9 @@ class MovingEntity(arcade.Sprite):
                 self.sync_to_grid()
                 return
 
-        if not is_street_tile(next_x, next_y):
-            valid_neighbors = [
-                (direction, neighbor_x, neighbor_y)
-                for direction, neighbor_x, neighbor_y in street_neighbors(self.grid_x, self.grid_y)
-                if occupied_tiles is None or (neighbor_x, neighbor_y) not in occupied_tiles
-            ]
-            if not valid_neighbors:
-                self.sync_to_grid()
-                return
-
-            self.direction, next_x, next_y = random.choice(valid_neighbors)
-
-        if occupied_tiles is not None and (next_x, next_y) in occupied_tiles:
-            self.sync_to_grid()
-            return
-
-        self.grid_x = next_x
-        self.grid_y = next_y
+        self.direction = candidate_direction
+        self.grid_x = candidate_x
+        self.grid_y = candidate_y
         self.angle = direction_to_angle(self.direction, self.facing)
         self.sync_to_grid()
 

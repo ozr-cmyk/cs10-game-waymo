@@ -140,6 +140,16 @@ def direction_to_angle(direction, facing):
     return DIRECTION_ANGLES[facing][direction]
 
 
+def is_intersection_tile(grid_x, grid_y):
+    return (
+        is_street_tile(grid_x, grid_y)
+        and is_street_tile(grid_x - 1, grid_y)
+        and is_street_tile(grid_x + 1, grid_y)
+        and is_street_tile(grid_x, grid_y - 1)
+        and is_street_tile(grid_x, grid_y + 1)
+    )
+
+
 def draw_stoplight(grid_x, grid_y, state="red"):
     """Draw a simple stoplight on top of the street grid."""
     center_x, center_y = grid_to_center(grid_x, grid_y)
@@ -190,6 +200,23 @@ def draw_stoplight(grid_x, grid_y, state="red"):
             light_radius,
             light_color,
         )
+
+
+def draw_stoplights_every_third_intersection():
+    """Place stoplights on every third intersection tile."""
+    intersection_count = 0
+    light_states = ("red", "yellow", "green")
+
+    for grid_y in range(GRID_ROWS):
+        for grid_x in range(GRID_COLS):
+            if not is_intersection_tile(grid_x, grid_y):
+                continue
+
+            if intersection_count % 3 == 0:
+                state = light_states[(intersection_count // 3) % len(light_states)]
+                draw_stoplight(grid_x, grid_y, state=state)
+
+            intersection_count += 1
 
 
 class MovingEntity(arcade.Sprite):
@@ -296,7 +323,7 @@ class GameView(arcade.View):
         self.clear()
 
         self.draw_streets()
-        draw_stoplight(4, 13, state="red")
+        draw_stoplights_every_third_intersection()
 
         self.entity_list.draw()
         self.player_list.draw()

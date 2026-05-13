@@ -158,18 +158,22 @@ def draw_stoplight(grid_x, grid_y, state="red"):
         "yellow": arcade.color.GOLD,
         "green": arcade.color.GREEN,
     }
-    active_color = active_colors.get(state, arcade.color.RED)
 
-    arcade.draw_rectangle_filled(
-        center_x,
-        center_y - GRID_CELL_HEIGHT * 0.25,
+    pole_left = center_x - pole_width / 2
+    pole_bottom = center_y - GRID_CELL_HEIGHT * 0.25 - pole_height / 2
+    arcade.draw_lbwh_rectangle_filled(
+        pole_left,
+        pole_bottom,
         pole_width,
         pole_height,
         pole_color,
     )
-    arcade.draw_rectangle_filled(
-        center_x,
-        center_y + GRID_CELL_HEIGHT * 0.35,
+
+    housing_left = center_x - housing_width / 2
+    housing_bottom = center_y + GRID_CELL_HEIGHT * 0.35 - housing_height / 2
+    arcade.draw_lbwh_rectangle_filled(
+        housing_left,
+        housing_bottom,
         housing_width,
         housing_height,
         housing_color,
@@ -182,7 +186,7 @@ def draw_stoplight(grid_x, grid_y, state="red"):
         light_color = active_colors[light_state] if light_state == state else inactive_color
         arcade.draw_circle_filled(
             center_x,
-            center_y + GRID_CELL_HEIGHT * 0.35 + (housing_height * offset),
+            housing_bottom + housing_height / 2 + (housing_height * offset),
             light_radius,
             light_color,
         )

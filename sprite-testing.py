@@ -126,6 +126,16 @@ def random_street_tile():
     return random.choice(street_tiles)
 
 
+def random_street_tiles(excluded=None):
+    excluded = excluded or set()
+    return [
+        (grid_x, grid_y)
+        for grid_y, row in enumerate(STREET_TILE_ROWS)
+        for grid_x, tile in enumerate(row)
+        if tile == "#" and (grid_x, grid_y) not in excluded
+    ]
+
+
 def street_neighbors(grid_x, grid_y):
     neighbors = []
 
@@ -271,10 +281,14 @@ class MovingEntity(arcade.Sprite):
     def sync_to_grid(self):
         self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
 
-    def step(self, stoplight_lookup=None, stoplight_timer=None):
+    def step(self, occupied_tiles=None, stoplight_lookup=None, stoplight_timer=None):
         dx, dy = DIRECTION_DELTAS[self.direction]
         next_x = self.grid_x + dx
         next_y = self.grid_y + dy
+
+        if occupied_tiles is not None and (next_x, next_y) in occupied_tiles:
+            self.sync_to_grid()
+            return
 
         if stoplight_lookup is not None and stoplight_timer is not None and self.name in RED_LIGHT_ENTITIES:
             current_state = stoplight_state_for_tile(
@@ -294,25 +308,33 @@ class MovingEntity(arcade.Sprite):
                 return
 
         if not is_street_tile(next_x, next_y):
-            valid_neighbors = street_neighbors(self.grid_x, self.grid_y)
+            valid_neighbors = [
+                (direction, neighbor_x, neighbor_y)
+                for direction, neighbor_x, neighbor_y in street_neighbors(self.grid_x, self.grid_y)
+                if occupied_tiles is None or (neighbor_x, neighbor_y) not in occupied_tiles
+            ]
             if not valid_neighbors:
                 self.sync_to_grid()
                 return
 
             self.direction, next_x, next_y = random.choice(valid_neighbors)
 
+        if occupied_tiles is not None and (next_x, next_y) in occupied_tiles:
+            self.sync_to_grid()
+            return
+
         self.grid_x = next_x
         self.grid_y = next_y
         self.angle = direction_to_angle(self.direction, self.facing)
         self.sync_to_grid()
 
-    def update(self, delta_time, stoplight_lookup=None, stoplight_timer=None):
+    def update(self, delta_time, occupied_tiles=None, stoplight_lookup=None, stoplight_timer=None):
         self.step_timer += delta_time
         step_interval = 1.0 / self.get_speed()
 
         while self.step_timer >= step_interval:
             self.step_timer -= step_interval
-            self.step(stoplight_lookup, stoplight_timer)
+            self.step(occupied_tiles, stoplight_lookup, stoplight_timer)
 
         self.sync_to_grid()
 
@@ -353,11 +375,12 @@ class GameView(arcade.View):
 
         self.player_list.append(self.player_sprite)
 
-        for _ in range(ENTITY_COUNT):
+        available_tiles = random_street_tiles(excluded={(self.player_grid_x, self.player_grid_y)})
+        for grid_x, grid_y in random.sample(available_tiles, ENTITY_COUNT):
             config = random.choice(ENTITY_TYPES)
 
             entity = MovingEntity(config)
-            entity.grid_x, entity.grid_y = random_street_tile()
+            entity.grid_x, entity.grid_y = grid_x, grid_y
             entity.sync_to_grid()
 
             self.entity_list.append(entity)
@@ -481,8 +504,12 @@ class GameView(arcade.View):
             return
 
         self.stoplight_timer += delta_time
+        occupied_tiles = {
+            (entity.grid_x, entity.grid_y)
+            for entity in self.entity_list
+        }
         for entity in self.entity_list:
-            entity.update(delta_time, self.stoplight_lookup, self.stoplight_timer)
+            entity.update(delta_time, occupied_tiles, self.stoplight_lookup, self.stoplight_timer)
 
         if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
             self.player_step_timer = 0.0

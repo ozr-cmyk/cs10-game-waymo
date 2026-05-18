@@ -10,7 +10,7 @@ ENTITY_COUNT = 4
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
-PLAYER_TILES_PER_SECOND = 5
+WAYMO_TILES_PER_SECOND = 5
 STOPLIGHT_PHASE_SECONDS = 7.0
 STREET_FILL_ALPHA = 165
 BLOCK_FILL_ALPHA = 195
@@ -662,7 +662,7 @@ class GameView(arcade.View):
 
         if self.autopilot and self.route:
             self.player_step_timer += delta_time
-            player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND
+            player_step_interval = 1.0 / WAYMO_TILES_PER_SECOND
             move_x, move_y = self.get_player_direction()
 
             while self.player_step_timer >= player_step_interval:
@@ -678,7 +678,7 @@ class GameView(arcade.View):
                 return
 
             self.player_step_timer += delta_time
-            player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND
+            player_step_interval = 1.0 / WAYMO_TILES_PER_SECOND
             move_x, move_y = self.get_player_direction()
 
             while self.player_step_timer >= player_step_interval and (move_x or move_y):

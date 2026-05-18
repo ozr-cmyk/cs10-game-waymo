@@ -511,6 +511,7 @@ class GameView(arcade.View):
         self.autopilot = True
         self.pending_direction = None
         self.client = None
+        self.client_picked_up = False
         self.client_list = arcade.SpriteList()
         self.traffic_obstacle = None
         self.traffic_obstacle_list = arcade.SpriteList()
@@ -525,6 +526,7 @@ class GameView(arcade.View):
         self.client_list = arcade.SpriteList()
         self.traffic_obstacle_list = arcade.SpriteList()
         self.client = None
+        self.client_picked_up = False
         self.traffic_obstacle = None
         self.traffic_obstacle_tile = None
 
@@ -579,6 +581,7 @@ class GameView(arcade.View):
         self.client.grid_x, self.client.grid_y = client_tile
         self.client.sync_to_grid()
         self.client_list.append(self.client)
+        self.client_picked_up = False
         occupied_tiles.add(client_tile)
 
         self.traffic_obstacle_tile = choose_traffic_obstacle_tile(self.route, excluded=occupied_tiles)
@@ -769,6 +772,15 @@ class GameView(arcade.View):
             return 1, 0
         return 0, 0
 
+    def maybe_pick_up_client(self):
+        if self.client is None or self.client_picked_up:
+            return
+
+        if arcade.check_for_collision(self.player_sprite, self.client):
+            self.client_picked_up = True
+            self.client_list = arcade.SpriteList()
+            self.client = None
+
     def on_update(self, delta_time):
         if self.game_over:
             return
@@ -808,6 +820,8 @@ class GameView(arcade.View):
                 self.player_step_timer -= player_step_interval
                 self.move_player(move_x, move_y)
                 move_x, move_y = self.get_player_direction()
+
+        self.maybe_pick_up_client()
 
         if arcade.check_for_collision_with_list(self.player_sprite, self.entity_list):
             self.game_over = True

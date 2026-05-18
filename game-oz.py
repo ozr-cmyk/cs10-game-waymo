@@ -591,19 +591,15 @@ class GameView(arcade.View):
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W:
-            self.autopilot = False
             self.up_pressed = True
             self.player_step_timer = 0.0
         elif key == arcade.key.S:
-            self.autopilot = False
             self.down_pressed = True
             self.player_step_timer = 0.0
         elif key == arcade.key.A:
-            self.autopilot = False
             self.left_pressed = True
             self.player_step_timer = 0.0
         elif key == arcade.key.D:
-            self.autopilot = False
             self.right_pressed = True
             self.player_step_timer = 0.0
 
@@ -667,10 +663,15 @@ class GameView(arcade.View):
         if self.autopilot and self.route:
             self.player_step_timer += delta_time
             player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND
+            move_x, move_y = self.get_player_direction()
 
             while self.player_step_timer >= player_step_interval:
                 self.player_step_timer -= player_step_interval
-                self.advance_route()
+                if move_x or move_y:
+                    self.move_player(move_x, move_y)
+                else:
+                    self.advance_route()
+                move_x, move_y = self.get_player_direction()
         else:
             if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
                 self.player_step_timer = 0.0

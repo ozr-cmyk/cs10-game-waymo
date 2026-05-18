@@ -159,13 +159,13 @@ class Client(arcade.Sprite):
 
     def draw_chat(self):
         if self.chat_timer > 0:
-            arcade.draw_rectangle_filled(
+            arcade.draw_rectangle(center_x, center_y, width, height, color)
                 self.center_x,
                 self.center_y + 40,
                 len(self.chat_text) * 10,
                 24,
                 arcade.color.WHITE_SMOKE
-            )
+
             arcade.draw_text(
                 self.chat_text,
                 self.center_x - len(self.chat_text) * 5,
@@ -225,13 +225,13 @@ class GameView(arcade.View):
             for x, tile in enumerate(row):
                 center_x, center_y = grid_to_center(x, y)
                 color = arcade.color.DARK_SLATE_GRAY if tile == "#" else arcade.color.LIGHT_CORAL
-                arcade.draw_rectangle_filled(
+                arcade.draw_rectangle(center_x, center_y, width, height, color)
                     center_x,
                     center_y,
                     GRID_CELL_WIDTH,
                     GRID_CELL_HEIGHT,
                     color
-                )
+                
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W: self.up_pressed = True

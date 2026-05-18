@@ -103,6 +103,8 @@ RED_LIGHT_ENTITIES = {"car", "cyclist", "pedestrian"}
 TURN_WEIGHT = 2.0
 START_TILE = (0, 0)
 GOAL_TILE = (GRID_COLS - 1, GRID_ROWS - 1)
+DESTINATION_TEXTURE = "star.png"
+DESTINATION_MIN_DISTANCE_TILES = 15
 
 # --- Client configuration ---
 CLIENT = {
@@ -155,6 +157,44 @@ def random_street_tiles(excluded=None):
         for grid_x, tile in enumerate(row)
         if tile == "#" and (grid_x, grid_y) not in excluded
     ]
+
+
+def route_distance_between_tiles(start_tile, goal_tile):
+    route = shortest_route_between_tiles(start_tile, goal_tile)
+    if not route:
+        return None
+    return len(route) - 1
+
+
+def random_destination_tile(start_tile, minimum_distance=DESTINATION_MIN_DISTANCE_TILES, excluded=None):
+    excluded = set(excluded or ())
+    excluded.add(start_tile)
+
+    eligible_tiles = []
+    farthest_tiles = []
+    farthest_distance = -1
+
+    for tile in random_street_tiles(excluded=excluded):
+        distance = route_distance_between_tiles(start_tile, tile)
+        if distance is None:
+            continue
+
+        if distance >= minimum_distance:
+            eligible_tiles.append(tile)
+
+        if distance > farthest_distance:
+            farthest_distance = distance
+            farthest_tiles = [tile]
+        elif distance == farthest_distance:
+            farthest_tiles.append(tile)
+
+    if eligible_tiles:
+        return random.choice(eligible_tiles)
+
+    if farthest_tiles:
+        return random.choice(farthest_tiles)
+
+    return None
 
 
 def street_neighbors(grid_x, grid_y):
@@ -510,9 +550,12 @@ class GameView(arcade.View):
         self.route_index = 0
         self.autopilot = True
         self.pending_direction = None
+        self.route_goal_tile = GOAL_TILE
         self.client = None
         self.client_picked_up = False
         self.client_list = arcade.SpriteList()
+        self.destination_tile = None
+        self.destination = None
         self.traffic_obstacle = None
         self.traffic_obstacle_list = arcade.SpriteList()
         self.traffic_obstacle_tile = None
@@ -525,8 +568,11 @@ class GameView(arcade.View):
         self.entity_list = arcade.SpriteList()
         self.client_list = arcade.SpriteList()
         self.traffic_obstacle_list = arcade.SpriteList()
+        self.destination_tile = None
+        self.destination = None
         self.client = None
         self.client_picked_up = False
+        self.route_goal_tile = GOAL_TILE
         self.traffic_obstacle = None
         self.traffic_obstacle_tile = None
 
@@ -541,7 +587,7 @@ class GameView(arcade.View):
             self.player_grid_x,
             self.player_grid_y,
         )
-        self.route = shortest_route_between_tiles(START_TILE, GOAL_TILE)
+        self.route = shortest_route_between_tiles(START_TILE, self.route_goal_tile)
         self.route_index = 0
 
         if len(self.route) >= 2:
@@ -604,7 +650,7 @@ class GameView(arcade.View):
         current_tile = (self.player_grid_x, self.player_grid_y)
 
         if not self.route:
-            self.route = shortest_route_between_tiles(current_tile, GOAL_TILE)
+            self.route = shortest_route_between_tiles(current_tile, self.route_goal_tile)
             self.route_index = 0
             return
 
@@ -612,7 +658,7 @@ class GameView(arcade.View):
             self.route_index = self.route.index(current_tile)
             return
 
-        self.route = shortest_route_between_tiles(current_tile, GOAL_TILE)
+        self.route = shortest_route_between_tiles(current_tile, self.route_goal_tile)
         self.route_index = 0
 
     def should_show_traffic_obstacle(self):
@@ -655,6 +701,9 @@ class GameView(arcade.View):
         self.client_list.draw()
         if self.client is not None:
             self.client.draw_chat()
+
+        if self.client_picked_up and self.destination is not None:
+            self.destination.draw()
 
         if self.should_show_traffic_obstacle():
             self.traffic_obstacle_list.draw()
@@ -761,6 +810,36 @@ class GameView(arcade.View):
         )
         self.refresh_route_from_player()
 
+    def start_delivery_route(self):
+        self.destination_tile = None
+        self.destination = None
+
+        occupied_tiles = {
+            (entity.grid_x, entity.grid_y)
+            for entity in self.entity_list
+        }
+        current_tile = (self.player_grid_x, self.player_grid_y)
+        destination_tile = random_destination_tile(current_tile, excluded=occupied_tiles)
+
+        if destination_tile is None:
+            self.route_goal_tile = GOAL_TILE
+            self.route = shortest_route_between_tiles(current_tile, self.route_goal_tile)
+            self.route_index = 0
+            return
+
+        self.destination_tile = destination_tile
+        self.destination = arcade.Sprite(
+            DESTINATION_TEXTURE,
+            sprite_scale_to_two_tiles(DESTINATION_TEXTURE),
+        )
+        self.destination.grid_x, self.destination.grid_y = destination_tile
+        self.destination.center_x, self.destination.center_y = grid_to_center(
+            *destination_tile
+        )
+        self.route_goal_tile = destination_tile
+        self.route = shortest_route_between_tiles(current_tile, self.route_goal_tile)
+        self.route_index = 0
+
     def get_player_direction(self):
         if self.up_pressed:
             return 0, 1
@@ -780,6 +859,7 @@ class GameView(arcade.View):
             self.client_picked_up = True
             self.client_list = arcade.SpriteList()
             self.client = None
+            self.start_delivery_route()
 
     def on_update(self, delta_time):
         if self.game_over:

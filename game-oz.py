@@ -1,4 +1,5 @@
 import random
+from collections import deque
 from functools import lru_cache
 
 import arcade
@@ -98,6 +99,8 @@ CAT = {
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
 RED_LIGHT_ENTITIES = {"car", "cyclist", "pedestrian"}
 TURN_WEIGHT = 2.0
+START_TILE = (0, 0)
+GOAL_TILE = (GRID_COLS - 1, GRID_ROWS - 1)
 
 
 def grid_to_center(grid_x, grid_y):
@@ -154,6 +157,43 @@ def street_neighbors(grid_x, grid_y):
             neighbors.append((direction, next_x, next_y))
 
     return neighbors
+
+
+def shortest_route_between_tiles(start_tile, goal_tile):
+    """Return the shortest street route between two grid tiles.
+
+    Because every street step costs the same, breadth-first search gives us the
+    optimal route in number of tiles.
+    """
+    if not is_street_tile(*start_tile) or not is_street_tile(*goal_tile):
+        return []
+
+    queue = deque([start_tile])
+    came_from = {start_tile: None}
+
+    while queue:
+        current_x, current_y = queue.popleft()
+        if (current_x, current_y) == goal_tile:
+            break
+
+        for _, next_x, next_y in street_neighbors(current_x, current_y):
+            next_tile = (next_x, next_y)
+            if next_tile in came_from:
+                continue
+            came_from[next_tile] = (current_x, current_y)
+            queue.append(next_tile)
+
+    if goal_tile not in came_from:
+        return []
+
+    route = []
+    current_tile = goal_tile
+    while current_tile is not None:
+        route.append(current_tile)
+        current_tile = came_from[current_tile]
+
+    route.reverse()
+    return route
 
 
 def direction_to_angle(direction, facing):
@@ -278,6 +318,24 @@ def stoplight_state_for_tile(grid_x, grid_y, stoplight_lookup, timer):
     return "green" if int((timer + stoplight["phase_offset"]) / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
 
 
+def draw_route(route):
+    """Render the planned route as a thin line over the street grid."""
+    if len(route) < 2:
+        return
+
+    route_color = (70, 230, 255, 180)
+    node_color = (70, 230, 255, 220)
+
+    for start_tile, end_tile in zip(route, route[1:]):
+        start_x, start_y = grid_to_center(*start_tile)
+        end_x, end_y = grid_to_center(*end_tile)
+        arcade.draw_line(start_x, start_y, end_x, end_y, route_color, 4)
+
+    for grid_x, grid_y in route[::4]:
+        center_x, center_y = grid_to_center(grid_x, grid_y)
+        arcade.draw_circle_filled(center_x, center_y, min(GRID_CELL_WIDTH, GRID_CELL_HEIGHT) * 0.08, node_color)
+
+
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
         super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
@@ -383,10 +441,12 @@ class GameView(arcade.View):
         self.right_pressed = False
         self.up_pressed = False
         self.down_pressed = False
-        self.player_grid_x = 0
-        self.player_grid_y = 0
+        self.player_grid_x = START_TILE[0]
+        self.player_grid_y = START_TILE[1]
         self.player_step_timer = 0.0
         self.stoplight_timer = random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2)
+        self.route = []
+        self.route_index = 0
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)
@@ -401,13 +461,28 @@ class GameView(arcade.View):
         )
 
         # Always start the player in the bottom-left street tile.
-        self.player_grid_x = 0
-        self.player_grid_y = 0
+        self.player_grid_x, self.player_grid_y = START_TILE
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
             self.player_grid_x,
             self.player_grid_y,
         )
-        self.player_sprite.angle = direction_to_angle("left", "left")
+        self.route = shortest_route_between_tiles(START_TILE, GOAL_TILE)
+        self.route_index = 0
+
+        if len(self.route) >= 2:
+            first_step_x = self.route[1][0] - self.route[0][0]
+            first_step_y = self.route[1][1] - self.route[0][1]
+            if first_step_x > 0:
+                initial_direction = "right"
+            elif first_step_x < 0:
+                initial_direction = "left"
+            elif first_step_y > 0:
+                initial_direction = "up"
+            else:
+                initial_direction = "down"
+            self.player_sprite.angle = direction_to_angle(initial_direction, "left")
+        else:
+            self.player_sprite.angle = direction_to_angle("left", "left")
 
         self.player_list.append(self.player_sprite)
 
@@ -425,10 +500,24 @@ class GameView(arcade.View):
         self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
         self.game_over = False
 
+    def advance_route(self):
+        if not self.route or self.route_index >= len(self.route) - 1:
+            return
+
+        next_tile = self.route[self.route_index + 1]
+        current_tile = self.route[self.route_index]
+        dx = next_tile[0] - current_tile[0]
+        dy = next_tile[1] - current_tile[1]
+
+        self.move_player(dx, dy)
+        if (self.player_grid_x, self.player_grid_y) == next_tile:
+            self.route_index += 1
+
     def on_draw(self):
         self.clear()
 
         self.draw_streets()
+        draw_route(self.route)
         draw_stoplights_every_third_intersection(self.stoplights, self.stoplight_timer)
 
         self.entity_list.draw()
@@ -547,18 +636,26 @@ class GameView(arcade.View):
         for entity in self.entity_list:
             entity.update(delta_time, occupied_tiles, self.stoplight_lookup, self.stoplight_timer)
 
-        if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
-            self.player_step_timer = 0.0
-            return
+        if self.route:
+            self.player_step_timer += delta_time
+            player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND
 
-        self.player_step_timer += delta_time
-        player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND
-        move_x, move_y = self.get_player_direction()
+            while self.player_step_timer >= player_step_interval:
+                self.player_step_timer -= player_step_interval
+                self.advance_route()
+        else:
+            if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
+                self.player_step_timer = 0.0
+                return
 
-        while self.player_step_timer >= player_step_interval and (move_x or move_y):
-            self.player_step_timer -= player_step_interval
-            self.move_player(move_x, move_y)
+            self.player_step_timer += delta_time
+            player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND
             move_x, move_y = self.get_player_direction()
+
+            while self.player_step_timer >= player_step_interval and (move_x or move_y):
+                self.player_step_timer -= player_step_interval
+                self.move_player(move_x, move_y)
+                move_x, move_y = self.get_player_direction()
 
         if arcade.check_for_collision_with_list(self.player_sprite, self.entity_list):
             self.game_over = True

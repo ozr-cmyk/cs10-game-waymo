@@ -477,6 +477,8 @@ class GameView(arcade.View):
     def setup(self):
         self.player_list = arcade.SpriteList()
         self.entity_list = arcade.SpriteList()
+        self.traffic_obstacle = None
+        self.traffic_obstacle_tile = None
 
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
@@ -521,10 +523,8 @@ class GameView(arcade.View):
 
             self.entity_list.append(entity)
 
-        occupied_tiles = {
-            (self.player_grid_x, self.player_grid_y),
-            *(entity.grid_x, entity.grid_y for entity in self.entity_list),
-        }
+        occupied_tiles = {(self.player_grid_x, self.player_grid_y)}
+        occupied_tiles.update((entity.grid_x, entity.grid_y) for entity in self.entity_list)
         self.traffic_obstacle_tile = choose_traffic_obstacle_tile(self.route, excluded=occupied_tiles)
         if self.traffic_obstacle_tile is not None:
             self.traffic_obstacle = arcade.Sprite(

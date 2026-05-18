@@ -51,7 +51,6 @@ DIRECTION_DELTAS = {
     "right": (1, 0),
 }
 
-# Arcade uses degrees, with 0 pointing to the right and positive angles rotating counterclockwise.
 DIRECTION_ANGLES = {
     "right": {"right": 90, "up": 0, "left": 270, "down": 180},
     "left": {"left": 270, "down": 180, "right": 90, "up": 0},
@@ -64,8 +63,9 @@ OPPOSITE_DIRECTION = {
     "right": "left",
 }
 
+TURN_WEIGHT = 2.0
 
-# --- Variants (SAFE VERSION) ---
+# --- Variants ---
 CAR = {
     "name": "car",
     "texture": "car.png",
@@ -95,11 +95,27 @@ CAT = {
     "facing": "left",
 }
 
+CLIENT_MESSAGES = [
+    "I need a Waymo",
+    "It's taking a while",
+    "I should've taken an Uber",
+    "Where is my ride?",
+]
+
+CLIENT = {
+    "name": "client",
+    "texture": "pedestrian.png",
+    "speed": 2,
+    "facing": "right",
+    "messages": CLIENT_MESSAGES,
+}
+
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
+
 RED_LIGHT_ENTITIES = {"car", "cyclist", "pedestrian"}
-TURN_WEIGHT = 2.0
 
 
+# --- Utility functions ---
 def grid_to_center(grid_x, grid_y):
     return (
         grid_x * GRID_CELL_WIDTH + GRID_CELL_WIDTH / 2,
@@ -278,6 +294,7 @@ def stoplight_state_for_tile(grid_x, grid_y, stoplight_lookup, timer):
     return "green" if int((timer + stoplight["phase_offset"]) / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
 
 
+# --- Entity Classes ---
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
         super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
@@ -375,6 +392,37 @@ class MovingEntity(arcade.Sprite):
         self.sync_to_grid()
 
 
+class Client(MovingEntity):
+    """Special pedestrian who displays chat messages."""
+    def __init__(self, config):
+        super().__init__(config)
+        self.chat_messages = config["messages"]
+        self.chat_timer = 0.0
+        self.current_message_index = 0
+
+    def update_chat(self, delta_time):
+        self.chat_timer += delta_time
+        if self.chat_timer >= 5.0:
+            self.chat_timer = 0.0
+            self.current_message_index = (self.current_message_index + 1) % len(self.chat_messages)
+
+    def draw_chat(self):
+        message = self.chat_messages[self.current_message_index]
+        arcade.draw_text(
+            message,
+            self.center_x,
+            self.center_y + GRID_CELL_HEIGHT * 0.7,
+            arcade.color.WHITE,
+            12,
+            anchor_x="center",
+        )
+
+    def update(self, delta_time, occupied_tiles=None, stoplight_lookup=None, stoplight_timer=None):
+        super().update(delta_time, occupied_tiles, stoplight_lookup, stoplight_timer)
+        self.update_chat(delta_time)
+
+
+# --- Game View ---
 class GameView(arcade.View):
     def __init__(self):
         super().__init__()
@@ -400,7 +448,6 @@ class GameView(arcade.View):
             sprite_scale_to_two_tiles("waymo.avif")
         )
 
-        # Always start the player in the bottom-left street tile.
         self.player_grid_x = 0
         self.player_grid_y = 0
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
@@ -408,18 +455,24 @@ class GameView(arcade.View):
             self.player_grid_y,
         )
         self.player_sprite.angle = direction_to_angle("left", "left")
-
         self.player_list.append(self.player_sprite)
 
         available_tiles = random_street_tiles(excluded={(self.player_grid_x, self.player_grid_y)})
-        for grid_x, grid_y in random.sample(available_tiles, ENTITY_COUNT):
-            config = random.choice(ENTITY_TYPES)
 
+        # Spawn other entities
+        for grid_x, grid_y in random.sample(available_tiles, ENTITY_COUNT):
+            config = random.choice(ENTITY_TYPES[:-1])  # exclude client
             entity = MovingEntity(config)
             entity.grid_x, entity.grid_y = grid_x, grid_y
             entity.sync_to_grid()
-
             self.entity_list.append(entity)
+
+        # Spawn the client
+        client_tile = random.choice(random_street_tiles(excluded={(self.player_grid_x, self.player_grid_y)}))
+        self.client = Client(CLIENT)
+        self.client.grid_x, self.client.grid_y = client_tile
+        self.client.sync_to_grid()
+        self.entity_list.append(self.client)
 
         self.stoplights = build_stoplights()
         self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
@@ -427,11 +480,10 @@ class GameView(arcade.View):
 
     def on_draw(self):
         self.clear()
-
         self.draw_streets()
         draw_stoplights_every_third_intersection(self.stoplights, self.stoplight_timer)
-
         self.entity_list.draw()
+        self.client.draw_chat()
         self.player_list.draw()
 
         if self.game_over:
@@ -501,74 +553,39 @@ class GameView(arcade.View):
         elif key == arcade.key.D:
             self.right_pressed = False
 
-    def move_player(self, dx, dy):
-        next_x = self.player_grid_x + dx
-        next_y = self.player_grid_y + dy
+    def update_player(self, delta_time):
+        move_dx = self.right_pressed - self.left_pressed
+        move_dy = self.up_pressed - self.down_pressed
 
-        if not is_street_tile(next_x, next_y):
+        if move_dx == 0 and move_dy == 0:
             return
 
-        self.player_grid_x = next_x
-        self.player_grid_y = next_y
-        if dx > 0:
-            direction = "right"
-        elif dx < 0:
-            direction = "left"
-        elif dy > 0:
-            direction = "up"
-        else:
-            direction = "down"
-        self.player_sprite.angle = direction_to_angle(direction, "left")
-        self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
-            self.player_grid_x,
-            self.player_grid_y,
-        )
+        target_x = self.player_grid_x + move_dx
+        target_y = self.player_grid_y + move_dy
 
-    def get_player_direction(self):
-        if self.up_pressed:
-            return 0, 1
-        if self.down_pressed:
-            return 0, -1
-        if self.left_pressed:
-            return -1, 0
-        if self.right_pressed:
-            return 1, 0
-        return 0, 0
+        if is_street_tile(target_x, target_y):
+            self.player_grid_x = target_x
+            self.player_grid_y = target_y
+            self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(self.player_grid_x, self.player_grid_y)
 
     def on_update(self, delta_time):
-        if self.game_over:
-            return
-
         self.stoplight_timer += delta_time
-        occupied_tiles = {
-            (entity.grid_x, entity.grid_y)
-            for entity in self.entity_list
-        }
+        self.update_player(delta_time)
+
+        occupied_tiles = {(entity.grid_x, entity.grid_y) for entity in self.entity_list if entity != self.client}
         for entity in self.entity_list:
             entity.update(delta_time, occupied_tiles, self.stoplight_lookup, self.stoplight_timer)
 
-        if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
-            self.player_step_timer = 0.0
-            return
-
-        self.player_step_timer += delta_time
-        player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND
-        move_x, move_y = self.get_player_direction()
-
-        while self.player_step_timer >= player_step_interval and (move_x or move_y):
-            self.player_step_timer -= player_step_interval
-            self.move_player(move_x, move_y)
-            move_x, move_y = self.get_player_direction()
-
-        if arcade.check_for_collision_with_list(self.player_sprite, self.entity_list):
+        if any(entity.grid_x == self.player_grid_x and entity.grid_y == self.player_grid_y for entity in self.entity_list if entity != self.player_sprite):
             self.game_over = True
 
 
+# --- Run Game ---
 def main():
     window = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
-    game = GameView()
-    game.setup()
-    window.show_view(game)
+    game_view = GameView()
+    game_view.setup()
+    window.show_view(game_view)
     arcade.run()
 
 

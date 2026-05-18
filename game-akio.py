@@ -143,7 +143,7 @@ def choose_direction_with_turn_bias(current_direction, options):
         weighted_options.extend([option] * int(weight * 2))
     return random.choice(weighted_options)
 
-# --- Entity classes ---
+# --- MovingEntity class ---
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
         super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
@@ -230,7 +230,7 @@ class Client(arcade.Sprite):
                 12
             )
 
-# --- Game view ---
+# --- GameView class ---
 class GameView(arcade.View):
     def __init__(self):
         super().__init__()
@@ -241,10 +241,4 @@ class GameView(arcade.View):
         self.down_pressed = False
         self.player_grid_x = 0
         self.player_grid_y = 0
-        self.player_step_timer = 0.0
-
-    def setup(self):
-        self.player_list = arcade.SpriteList()
-        self.entity_list = arcade.SpriteList()
-
-        self.player_sprite = arcade.Sprite("waymo.avif", sprite_scale
+        self.player_step_timer =

@@ -108,6 +108,7 @@ GOAL_TILE = (GRID_COLS - 1, GRID_ROWS - 1)
 CLIENT = {
     "name": "client",
     "texture": "client.png",
+    "scale": 2 / 3,
     "messages": ["I need a Waymo", "It's taking a while", "I should've taken an Uber"],
     "facing": "right",
 }
@@ -465,7 +466,10 @@ class Client(arcade.Sprite):
     """Stationary pedestrian that cycles through chat messages."""
 
     def __init__(self, config):
-        super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
+        super().__init__(
+            config["texture"],
+            sprite_scale_to_two_tiles(config["texture"]) * config.get("scale", 1),
+        )
         self.name = config["name"]
         self.facing = config["facing"]
         self.grid_x = 0

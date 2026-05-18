@@ -1,4 +1,5 @@
 import random
+from collections import deque
 from functools import lru_cache
 
 import arcade
@@ -6,10 +7,12 @@ from PIL import Image
 
 # --- Constants ---
 ENTITY_COUNT = 4
+TRAFFIC_OBSTACLE_TEXTURE = "Traffic!.png"
+TRAFFIC_OBSTACLE_TILE_SIZE = 8
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
-PLAYER_TILES_PER_SECOND = 8
+WAYMO_TILES_PER_SECOND = 4
 STOPLIGHT_PHASE_SECONDS = 7.0
 STREET_FILL_ALPHA = 165
 BLOCK_FILL_ALPHA = 195
@@ -98,6 +101,16 @@ CAT = {
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
 RED_LIGHT_ENTITIES = {"car", "cyclist", "pedestrian"}
 TURN_WEIGHT = 2.0
+START_TILE = (0, 0)
+GOAL_TILE = (GRID_COLS - 1, GRID_ROWS - 1)
+
+# --- Client configuration ---
+CLIENT = {
+    "name": "client",
+    "texture": "pedestrian.png",
+    "messages": ["I need a Waymo", "It's taking a while", "I should've taken an Uber"],
+    "facing": "right",
+}
 
 
 def grid_to_center(grid_x, grid_y):
@@ -154,6 +167,43 @@ def street_neighbors(grid_x, grid_y):
             neighbors.append((direction, next_x, next_y))
 
     return neighbors
+
+
+def shortest_route_between_tiles(start_tile, goal_tile):
+    """Return the shortest street route between two grid tiles.
+
+    Because every street step costs the same, breadth-first search gives us the
+    optimal route in number of tiles.
+    """
+    if not is_street_tile(*start_tile) or not is_street_tile(*goal_tile):
+        return []
+
+    queue = deque([start_tile])
+    came_from = {start_tile: None}
+
+    while queue:
+        current_x, current_y = queue.popleft()
+        if (current_x, current_y) == goal_tile:
+            break
+
+        for _, next_x, next_y in street_neighbors(current_x, current_y):
+            next_tile = (next_x, next_y)
+            if next_tile in came_from:
+                continue
+            came_from[next_tile] = (current_x, current_y)
+            queue.append(next_tile)
+
+    if goal_tile not in came_from:
+        return []
+
+    route = []
+    current_tile = goal_tile
+    while current_tile is not None:
+        route.append(current_tile)
+        current_tile = came_from[current_tile]
+
+    route.reverse()
+    return route
 
 
 def direction_to_angle(direction, facing):
@@ -278,6 +328,42 @@ def stoplight_state_for_tile(grid_x, grid_y, stoplight_lookup, timer):
     return "green" if int((timer + stoplight["phase_offset"]) / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
 
 
+def draw_route(route):
+    """Render the planned route as a thin line over the street grid."""
+    if len(route) < 2:
+        return
+
+    route_color = (70, 230, 255, 180)
+    node_color = (70, 230, 255, 220)
+
+    for start_tile, end_tile in zip(route, route[1:]):
+        start_x, start_y = grid_to_center(*start_tile)
+        end_x, end_y = grid_to_center(*end_tile)
+        arcade.draw_line(start_x, start_y, end_x, end_y, route_color, 4)
+
+    for grid_x, grid_y in route[::4]:
+        center_x, center_y = grid_to_center(grid_x, grid_y)
+        arcade.draw_circle_filled(center_x, center_y, min(GRID_CELL_WIDTH, GRID_CELL_HEIGHT) * 0.08, node_color)
+
+
+def choose_traffic_obstacle_tile(route, excluded=None):
+    """Pick a route tile for the traffic obstacle, favoring the middle of the path."""
+    excluded = excluded or set()
+    if len(route) <= 10:
+        return None
+
+    preferred_tiles = [tile for tile in route[10:-1] if tile not in excluded]
+    if len(preferred_tiles) >= 3:
+        middle_tiles = preferred_tiles[1:-1]
+        if middle_tiles:
+            preferred_tiles = middle_tiles
+
+    if not preferred_tiles:
+        return None
+
+    return random.choice(preferred_tiles)
+
+
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
         super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
@@ -375,6 +461,39 @@ class MovingEntity(arcade.Sprite):
         self.sync_to_grid()
 
 
+class Client(arcade.Sprite):
+    """Stationary pedestrian that cycles through chat messages."""
+
+    def __init__(self, config):
+        super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
+        self.name = config["name"]
+        self.facing = config["facing"]
+        self.grid_x = 0
+        self.grid_y = 0
+        self.messages = config["messages"]
+        self.chat_timer = 0.0
+        self.current_index = 0
+
+    def sync_to_grid(self):
+        self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
+
+    def update(self, delta_time, *args, **kwargs):
+        self.chat_timer += delta_time
+        if self.chat_timer >= 5.0:
+            self.chat_timer = 0.0
+            self.current_index = (self.current_index + 1) % len(self.messages)
+
+    def draw_chat(self):
+        arcade.draw_text(
+            self.messages[self.current_index],
+            self.center_x,
+            self.center_y + GRID_CELL_HEIGHT * 0.7,
+            arcade.color.WHITE,
+            12,
+            anchor_x="center",
+        )
+
+
 class GameView(arcade.View):
     def __init__(self):
         super().__init__()
@@ -383,10 +502,19 @@ class GameView(arcade.View):
         self.right_pressed = False
         self.up_pressed = False
         self.down_pressed = False
-        self.player_grid_x = 0
-        self.player_grid_y = 0
+        self.player_grid_x = START_TILE[0]
+        self.player_grid_y = START_TILE[1]
         self.player_step_timer = 0.0
         self.stoplight_timer = random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2)
+        self.route = []
+        self.route_index = 0
+        self.autopilot = True
+        self.pending_direction = None
+        self.client = None
+        self.client_list = arcade.SpriteList()
+        self.traffic_obstacle = None
+        self.traffic_obstacle_list = arcade.SpriteList()
+        self.traffic_obstacle_tile = None
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)
@@ -394,6 +522,11 @@ class GameView(arcade.View):
     def setup(self):
         self.player_list = arcade.SpriteList()
         self.entity_list = arcade.SpriteList()
+        self.client_list = arcade.SpriteList()
+        self.traffic_obstacle_list = arcade.SpriteList()
+        self.client = None
+        self.traffic_obstacle = None
+        self.traffic_obstacle_tile = None
 
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
@@ -401,13 +534,30 @@ class GameView(arcade.View):
         )
 
         # Always start the player in the bottom-left street tile.
-        self.player_grid_x = 0
-        self.player_grid_y = 0
+        self.player_grid_x, self.player_grid_y = START_TILE
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
             self.player_grid_x,
             self.player_grid_y,
         )
-        self.player_sprite.angle = direction_to_angle("left", "left")
+        self.route = shortest_route_between_tiles(START_TILE, GOAL_TILE)
+        self.route_index = 0
+
+        if len(self.route) >= 2:
+            first_step_x = self.route[1][0] - self.route[0][0]
+            first_step_y = self.route[1][1] - self.route[0][1]
+            if first_step_x > 0:
+                initial_direction = "right"
+            elif first_step_x < 0:
+                initial_direction = "left"
+            elif first_step_y > 0:
+                initial_direction = "up"
+            else:
+                initial_direction = "down"
+            self.player_sprite.angle = direction_to_angle(initial_direction, "left")
+        else:
+            self.player_sprite.angle = direction_to_angle("left", "left")
+
+        self.refresh_route_from_player()
 
         self.player_list.append(self.player_sprite)
 
@@ -421,15 +571,90 @@ class GameView(arcade.View):
 
             self.entity_list.append(entity)
 
+        occupied_tiles = {(self.player_grid_x, self.player_grid_y)}
+        occupied_tiles.update((entity.grid_x, entity.grid_y) for entity in self.entity_list)
+
+        client_tile = random.choice(random_street_tiles(excluded=occupied_tiles))
+        self.client = Client(CLIENT)
+        self.client.grid_x, self.client.grid_y = client_tile
+        self.client.sync_to_grid()
+        self.client_list.append(self.client)
+        occupied_tiles.add(client_tile)
+
+        self.traffic_obstacle_tile = choose_traffic_obstacle_tile(self.route, excluded=occupied_tiles)
+        if self.traffic_obstacle_tile is not None:
+            base_scale = sprite_scale_to_two_tiles(TRAFFIC_OBSTACLE_TEXTURE)
+            self.traffic_obstacle = arcade.Sprite(
+                TRAFFIC_OBSTACLE_TEXTURE,
+                base_scale * (TRAFFIC_OBSTACLE_TILE_SIZE / 2),
+            )
+            self.traffic_obstacle.center_x, self.traffic_obstacle.center_y = grid_to_center(
+                *self.traffic_obstacle_tile
+            )
+            self.traffic_obstacle_list.append(self.traffic_obstacle)
+
         self.stoplights = build_stoplights()
         self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
         self.game_over = False
+
+    def refresh_route_from_player(self):
+        current_tile = (self.player_grid_x, self.player_grid_y)
+
+        if not self.route:
+            self.route = shortest_route_between_tiles(current_tile, GOAL_TILE)
+            self.route_index = 0
+            return
+
+        if current_tile in self.route:
+            self.route_index = self.route.index(current_tile)
+            return
+
+        self.route = shortest_route_between_tiles(current_tile, GOAL_TILE)
+        self.route_index = 0
+
+    def should_show_traffic_obstacle(self):
+        if self.traffic_obstacle is None or not self.route:
+            return False
+
+        if self.traffic_obstacle_tile not in self.route:
+            return False
+
+        obstacle_index = self.route.index(self.traffic_obstacle_tile)
+        tiles_until_hit = obstacle_index - self.route_index
+
+        if tiles_until_hit < 0:
+            return False
+
+        seconds_until_hit = tiles_until_hit / WAYMO_TILES_PER_SECOND
+        return seconds_until_hit <= 2.0
+
+    def advance_route(self):
+        if not self.route or self.route_index >= len(self.route) - 1:
+            return
+
+        next_tile = self.route[self.route_index + 1]
+        current_tile = self.route[self.route_index]
+        dx = next_tile[0] - current_tile[0]
+        dy = next_tile[1] - current_tile[1]
+
+        self.move_player(dx, dy)
+        if (self.player_grid_x, self.player_grid_y) == next_tile:
+            self.route_index += 1
+        self.refresh_route_from_player()
 
     def on_draw(self):
         self.clear()
 
         self.draw_streets()
+        draw_route(self.route[self.route_index:])
         draw_stoplights_every_third_intersection(self.stoplights, self.stoplight_timer)
+
+        self.client_list.draw()
+        if self.client is not None:
+            self.client.draw_chat()
+
+        if self.should_show_traffic_obstacle():
+            self.traffic_obstacle_list.draw()
 
         self.entity_list.draw()
         self.player_list.draw()
@@ -484,12 +709,20 @@ class GameView(arcade.View):
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W:
             self.up_pressed = True
+            self.player_step_timer = 0.0
+            self.pending_direction = (0, 1)
         elif key == arcade.key.S:
             self.down_pressed = True
+            self.player_step_timer = 0.0
+            self.pending_direction = (0, -1)
         elif key == arcade.key.A:
             self.left_pressed = True
+            self.player_step_timer = 0.0
+            self.pending_direction = (-1, 0)
         elif key == arcade.key.D:
             self.right_pressed = True
+            self.player_step_timer = 0.0
+            self.pending_direction = (1, 0)
 
     def on_key_release(self, key, modifiers):
         if key == arcade.key.W:
@@ -523,6 +756,7 @@ class GameView(arcade.View):
             self.player_grid_x,
             self.player_grid_y,
         )
+        self.refresh_route_from_player()
 
     def get_player_direction(self):
         if self.up_pressed:
@@ -547,20 +781,41 @@ class GameView(arcade.View):
         for entity in self.entity_list:
             entity.update(delta_time, occupied_tiles, self.stoplight_lookup, self.stoplight_timer)
 
-        if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
-            self.player_step_timer = 0.0
-            return
+        if self.client is not None:
+            self.client.update(delta_time)
 
-        self.player_step_timer += delta_time
-        player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND
-        move_x, move_y = self.get_player_direction()
+        if self.autopilot and self.route:
+            self.player_step_timer += delta_time
+            player_step_interval = 1.0 / WAYMO_TILES_PER_SECOND
 
-        while self.player_step_timer >= player_step_interval and (move_x or move_y):
-            self.player_step_timer -= player_step_interval
-            self.move_player(move_x, move_y)
+            while self.player_step_timer >= player_step_interval:
+                self.player_step_timer -= player_step_interval
+                move_x, move_y = self.pending_direction or self.get_player_direction()
+                if move_x or move_y:
+                    self.move_player(move_x, move_y)
+                else:
+                    self.advance_route()
+        else:
+            if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
+                self.player_step_timer = 0.0
+                return
+
+            self.player_step_timer += delta_time
+            player_step_interval = 1.0 / WAYMO_TILES_PER_SECOND
             move_x, move_y = self.get_player_direction()
 
+            while self.player_step_timer >= player_step_interval and (move_x or move_y):
+                self.player_step_timer -= player_step_interval
+                self.move_player(move_x, move_y)
+                move_x, move_y = self.get_player_direction()
+
         if arcade.check_for_collision_with_list(self.player_sprite, self.entity_list):
+            self.game_over = True
+
+        if self.traffic_obstacle is not None and arcade.check_for_collision(
+            self.player_sprite,
+            self.traffic_obstacle,
+        ):
             self.game_over = True
 
 

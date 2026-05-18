@@ -197,6 +197,27 @@ def random_destination_tile(start_tile, minimum_distance=DESTINATION_MIN_DISTANC
     return None
 
 
+def adjacent_street_tiles(tile):
+    grid_x, grid_y = tile
+    adjacent_tiles = []
+
+    for dx, dy in DIRECTION_DELTAS.values():
+        next_tile = (grid_x + dx, grid_y + dy)
+        if is_street_tile(*next_tile):
+            adjacent_tiles.append(next_tile)
+
+    return adjacent_tiles
+
+
+def is_corner_tile(tile):
+    return tile in {
+        (0, 0),
+        (0, GRID_ROWS - 1),
+        (GRID_COLS - 1, 0),
+        (GRID_COLS - 1, GRID_ROWS - 1),
+    }
+
+
 def street_neighbors(grid_x, grid_y):
     neighbors = []
 
@@ -386,9 +407,12 @@ def draw_route(route):
         arcade.draw_circle_filled(center_x, center_y, min(GRID_CELL_WIDTH, GRID_CELL_HEIGHT) * 0.08, node_color)
 
 
-def choose_traffic_obstacle_tile(route, excluded=None):
+def choose_traffic_obstacle_tile(route, excluded=None, goal_tile=None):
     """Pick a route tile for the traffic obstacle, favoring the middle of the path."""
     excluded = excluded or set()
+    if goal_tile is not None and is_corner_tile(goal_tile):
+        excluded.update(adjacent_street_tiles(goal_tile))
+
     if len(route) <= 10:
         return None
 
@@ -634,7 +658,11 @@ class GameView(arcade.View):
         self.client_picked_up = False
         occupied_tiles.add(client_tile)
 
-        self.traffic_obstacle_tile = choose_traffic_obstacle_tile(self.route, excluded=occupied_tiles)
+        self.traffic_obstacle_tile = choose_traffic_obstacle_tile(
+            self.route,
+            excluded=occupied_tiles,
+            goal_tile=self.route_goal_tile,
+        )
         if self.traffic_obstacle_tile is not None:
             base_scale = sprite_scale_to_two_tiles(TRAFFIC_OBSTACLE_TEXTURE)
             self.traffic_obstacle = arcade.Sprite(

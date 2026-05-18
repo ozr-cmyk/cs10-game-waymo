@@ -589,6 +589,14 @@ class GameView(arcade.View):
             self.route_index += 1
         self.refresh_route_from_player()
 
+    def get_route_direction(self):
+        if not self.route or self.route_index >= len(self.route) - 1:
+            return 0, 0
+
+        current_tile = self.route[self.route_index]
+        next_tile = self.route[self.route_index + 1]
+        return next_tile[0] - current_tile[0], next_tile[1] - current_tile[1]
+
     def on_draw(self):
         self.clear()
 
@@ -732,8 +740,12 @@ class GameView(arcade.View):
                 self.player_step_timer -= player_step_interval
                 move_x, move_y = self.pending_direction or self.get_player_direction()
                 if move_x or move_y:
+                    route_dx, route_dy = self.get_route_direction()
                     self.move_player(move_x, move_y)
-                    self.pending_direction = None
+                    if (move_x, move_y) == (-route_dx, -route_dy):
+                        self.pending_direction = (move_x, move_y)
+                    else:
+                        self.pending_direction = None
                 else:
                     self.advance_route()
         else:

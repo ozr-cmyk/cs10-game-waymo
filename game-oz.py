@@ -4,6 +4,7 @@ from functools import lru_cache
 
 import arcade
 from PIL import Image
+from pyglet import display
 
 # --- Constants ---
 ENTITY_COUNT = 4
@@ -927,10 +928,18 @@ class GameView(arcade.View):
 
 
 def main():
+    screens = display.get_display().get_screens()
+    if not screens:
+        print(
+            "Could not start the game window. This usually means the current "
+            "environment does not have an available graphical display."
+        )
+        return
+
     window = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
     game = GameView()
-    game.setup()
     window.show_view(game)
+    game.setup()
     arcade.run()
 
 

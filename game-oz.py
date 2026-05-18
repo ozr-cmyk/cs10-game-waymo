@@ -104,6 +104,14 @@ TURN_WEIGHT = 2.0
 START_TILE = (0, 0)
 GOAL_TILE = (GRID_COLS - 1, GRID_ROWS - 1)
 
+# --- Client configuration ---
+CLIENT = {
+    "name": "client",
+    "texture": "pedestrian.png",
+    "messages": ["I need a Waymo", "It's taking a while", "I should've taken an Uber"],
+    "facing": "right",
+}
+
 
 def grid_to_center(grid_x, grid_y):
     return (
@@ -453,6 +461,39 @@ class MovingEntity(arcade.Sprite):
         self.sync_to_grid()
 
 
+class Client(arcade.Sprite):
+    """Stationary pedestrian that cycles through chat messages."""
+
+    def __init__(self, config):
+        super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
+        self.name = config["name"]
+        self.facing = config["facing"]
+        self.grid_x = 0
+        self.grid_y = 0
+        self.messages = config["messages"]
+        self.chat_timer = 0.0
+        self.current_index = 0
+
+    def sync_to_grid(self):
+        self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
+
+    def update(self, delta_time, *args, **kwargs):
+        self.chat_timer += delta_time
+        if self.chat_timer >= 5.0:
+            self.chat_timer = 0.0
+            self.current_index = (self.current_index + 1) % len(self.messages)
+
+    def draw_chat(self):
+        arcade.draw_text(
+            self.messages[self.current_index],
+            self.center_x,
+            self.center_y + GRID_CELL_HEIGHT * 0.7,
+            arcade.color.WHITE,
+            12,
+            anchor_x="center",
+        )
+
+
 class GameView(arcade.View):
     def __init__(self):
         super().__init__()
@@ -469,6 +510,8 @@ class GameView(arcade.View):
         self.route_index = 0
         self.autopilot = True
         self.pending_direction = None
+        self.client = None
+        self.client_list = arcade.SpriteList()
         self.traffic_obstacle = None
         self.traffic_obstacle_list = arcade.SpriteList()
         self.traffic_obstacle_tile = None
@@ -479,7 +522,9 @@ class GameView(arcade.View):
     def setup(self):
         self.player_list = arcade.SpriteList()
         self.entity_list = arcade.SpriteList()
+        self.client_list = arcade.SpriteList()
         self.traffic_obstacle_list = arcade.SpriteList()
+        self.client = None
         self.traffic_obstacle = None
         self.traffic_obstacle_tile = None
 
@@ -528,6 +573,14 @@ class GameView(arcade.View):
 
         occupied_tiles = {(self.player_grid_x, self.player_grid_y)}
         occupied_tiles.update((entity.grid_x, entity.grid_y) for entity in self.entity_list)
+
+        client_tile = random.choice(random_street_tiles(excluded=occupied_tiles))
+        self.client = Client(CLIENT)
+        self.client.grid_x, self.client.grid_y = client_tile
+        self.client.sync_to_grid()
+        self.client_list.append(self.client)
+        occupied_tiles.add(client_tile)
+
         self.traffic_obstacle_tile = choose_traffic_obstacle_tile(self.route, excluded=occupied_tiles)
         if self.traffic_obstacle_tile is not None:
             base_scale = sprite_scale_to_two_tiles(TRAFFIC_OBSTACLE_TEXTURE)
@@ -595,6 +648,10 @@ class GameView(arcade.View):
         self.draw_streets()
         draw_route(self.route[self.route_index:])
         draw_stoplights_every_third_intersection(self.stoplights, self.stoplight_timer)
+
+        self.client_list.draw()
+        if self.client is not None:
+            self.client.draw_chat()
 
         if self.should_show_traffic_obstacle():
             self.traffic_obstacle_list.draw()
@@ -723,6 +780,9 @@ class GameView(arcade.View):
         }
         for entity in self.entity_list:
             entity.update(delta_time, occupied_tiles, self.stoplight_lookup, self.stoplight_timer)
+
+        if self.client is not None:
+            self.client.update(delta_time)
 
         if self.autopilot and self.route:
             self.player_step_timer += delta_time

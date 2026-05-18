@@ -501,6 +501,21 @@ class GameView(arcade.View):
         self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
         self.game_over = False
 
+    def refresh_route_from_player(self):
+        current_tile = (self.player_grid_x, self.player_grid_y)
+
+        if not self.route:
+            self.route = shortest_route_between_tiles(current_tile, GOAL_TILE)
+            self.route_index = 0
+            return
+
+        if current_tile in self.route:
+            self.route_index = self.route.index(current_tile)
+            return
+
+        self.route = shortest_route_between_tiles(current_tile, GOAL_TILE)
+        self.route_index = 0
+
     def advance_route(self):
         if not self.route or self.route_index >= len(self.route) - 1:
             return
@@ -513,12 +528,13 @@ class GameView(arcade.View):
         self.move_player(dx, dy)
         if (self.player_grid_x, self.player_grid_y) == next_tile:
             self.route_index += 1
+        self.refresh_route_from_player()
 
     def on_draw(self):
         self.clear()
 
         self.draw_streets()
-        draw_route(self.route)
+        draw_route(self.route[self.route_index:])
         draw_stoplights_every_third_intersection(self.stoplights, self.stoplight_timer)
 
         self.entity_list.draw()
@@ -613,6 +629,7 @@ class GameView(arcade.View):
             self.player_grid_x,
             self.player_grid_y,
         )
+        self.refresh_route_from_player()
 
     def get_player_direction(self):
         if self.up_pressed:

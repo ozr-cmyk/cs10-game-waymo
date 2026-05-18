@@ -553,6 +553,7 @@ class GameView(arcade.View):
         self.route_goal_tile = GOAL_TILE
         self.client = None
         self.client_picked_up = False
+        self.delivery_route_pending = False
         self.client_list = arcade.SpriteList()
         self.destination_tile = None
         self.destination = None
@@ -572,6 +573,7 @@ class GameView(arcade.View):
         self.destination = None
         self.client = None
         self.client_picked_up = False
+        self.delivery_route_pending = False
         self.route_goal_tile = GOAL_TILE
         self.traffic_obstacle = None
         self.traffic_obstacle_tile = None
@@ -628,6 +630,7 @@ class GameView(arcade.View):
         self.client.sync_to_grid()
         self.client_list.append(self.client)
         self.client_picked_up = False
+        self.delivery_route_pending = False
         occupied_tiles.add(client_tile)
 
         self.destination_tile = random_destination_tile(
@@ -852,9 +855,18 @@ class GameView(arcade.View):
 
         if arcade.check_for_collision(self.player_sprite, self.client):
             self.client_picked_up = True
-            self.client_list = arcade.SpriteList()
+            self.delivery_route_pending = True
+            self.client.remove_from_sprite_lists()
             self.client = None
-            self.start_delivery_route()
+            self.pending_direction = None
+            self.player_step_timer = 0.0
+
+    def maybe_start_delivery_route(self):
+        if not self.delivery_route_pending:
+            return
+
+        self.delivery_route_pending = False
+        self.start_delivery_route()
 
     def on_update(self, delta_time):
         if self.game_over:
@@ -897,6 +909,7 @@ class GameView(arcade.View):
                 move_x, move_y = self.get_player_direction()
 
         self.maybe_pick_up_client()
+        self.maybe_start_delivery_route()
 
         if self.client_picked_up and self.destination is not None:
             if arcade.check_for_collision(self.player_sprite, self.destination):

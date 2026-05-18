@@ -559,6 +559,22 @@ class GameView(arcade.View):
         self.route = shortest_route_between_tiles(current_tile, GOAL_TILE)
         self.route_index = 0
 
+    def should_show_traffic_obstacle(self):
+        if self.traffic_obstacle is None or not self.route:
+            return False
+
+        if self.traffic_obstacle_tile not in self.route:
+            return False
+
+        obstacle_index = self.route.index(self.traffic_obstacle_tile)
+        tiles_until_hit = obstacle_index - self.route_index
+
+        if tiles_until_hit < 0:
+            return False
+
+        seconds_until_hit = tiles_until_hit / WAYMO_TILES_PER_SECOND
+        return seconds_until_hit <= 2.0
+
     def advance_route(self):
         if not self.route or self.route_index >= len(self.route) - 1:
             return
@@ -580,7 +596,8 @@ class GameView(arcade.View):
         draw_route(self.route[self.route_index:])
         draw_stoplights_every_third_intersection(self.stoplights, self.stoplight_timer)
 
-        self.traffic_obstacle_list.draw()
+        if self.should_show_traffic_obstacle():
+            self.traffic_obstacle_list.draw()
 
         self.entity_list.draw()
         self.player_list.draw()

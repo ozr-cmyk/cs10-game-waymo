@@ -7,6 +7,7 @@ from PIL import Image
 
 # --- Constants ---
 ENTITY_COUNT = 4
+TRAFFIC_OBSTACLE_TEXTURE = "Traffic!.png"
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
@@ -336,6 +337,24 @@ def draw_route(route):
         arcade.draw_circle_filled(center_x, center_y, min(GRID_CELL_WIDTH, GRID_CELL_HEIGHT) * 0.08, node_color)
 
 
+def choose_traffic_obstacle_tile(route, excluded=None):
+    """Pick a route tile for the traffic obstacle, favoring the middle of the path."""
+    excluded = excluded or set()
+    if len(route) < 3:
+        return None
+
+    preferred_tiles = [tile for tile in route[1:-1] if tile not in excluded]
+    if len(preferred_tiles) >= 3:
+        middle_tiles = preferred_tiles[1:-1]
+        if middle_tiles:
+            preferred_tiles = middle_tiles
+
+    if not preferred_tiles:
+        return None
+
+    return random.choice(preferred_tiles)
+
+
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
         super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
@@ -449,6 +468,8 @@ class GameView(arcade.View):
         self.route_index = 0
         self.autopilot = True
         self.pending_direction = None
+        self.traffic_obstacle = None
+        self.traffic_obstacle_tile = None
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)
@@ -500,6 +521,20 @@ class GameView(arcade.View):
 
             self.entity_list.append(entity)
 
+        occupied_tiles = {
+            (self.player_grid_x, self.player_grid_y),
+            *(entity.grid_x, entity.grid_y for entity in self.entity_list),
+        }
+        self.traffic_obstacle_tile = choose_traffic_obstacle_tile(self.route, excluded=occupied_tiles)
+        if self.traffic_obstacle_tile is not None:
+            self.traffic_obstacle = arcade.Sprite(
+                TRAFFIC_OBSTACLE_TEXTURE,
+                sprite_scale_to_two_tiles(TRAFFIC_OBSTACLE_TEXTURE),
+            )
+            self.traffic_obstacle.center_x, self.traffic_obstacle.center_y = grid_to_center(
+                *self.traffic_obstacle_tile
+            )
+
         self.stoplights = build_stoplights()
         self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
         self.game_over = False
@@ -539,6 +574,9 @@ class GameView(arcade.View):
         self.draw_streets()
         draw_route(self.route[self.route_index:])
         draw_stoplights_every_third_intersection(self.stoplights, self.stoplight_timer)
+
+        if self.traffic_obstacle is not None:
+            self.traffic_obstacle.draw()
 
         self.entity_list.draw()
         self.player_list.draw()
@@ -692,6 +730,12 @@ class GameView(arcade.View):
                 move_x, move_y = self.get_player_direction()
 
         if arcade.check_for_collision_with_list(self.player_sprite, self.entity_list):
+            self.game_over = True
+
+        if self.traffic_obstacle is not None and arcade.check_for_collision(
+            self.player_sprite,
+            self.traffic_obstacle,
+        ):
             self.game_over = True
 
 

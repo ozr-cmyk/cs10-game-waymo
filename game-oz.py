@@ -8,6 +8,7 @@ from PIL import Image
 # --- Constants ---
 ENTITY_COUNT = 4
 TRAFFIC_OBSTACLE_TEXTURE = "Traffic!.png"
+TRAFFIC_OBSTACLE_SCALE_MULTIPLIER = 1.5
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
@@ -531,7 +532,7 @@ class GameView(arcade.View):
         if self.traffic_obstacle_tile is not None:
             self.traffic_obstacle = arcade.Sprite(
                 TRAFFIC_OBSTACLE_TEXTURE,
-                sprite_scale_to_two_tiles(TRAFFIC_OBSTACLE_TEXTURE),
+                sprite_scale_to_two_tiles(TRAFFIC_OBSTACLE_TEXTURE) * TRAFFIC_OBSTACLE_SCALE_MULTIPLIER,
             )
             self.traffic_obstacle.center_x, self.traffic_obstacle.center_y = grid_to_center(
                 *self.traffic_obstacle_tile

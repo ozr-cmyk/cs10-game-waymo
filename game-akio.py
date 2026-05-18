@@ -14,6 +14,7 @@ WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
 WAYMO_TILES_PER_SECOND = 4
 STOPLIGHT_PHASE_SECONDS = 7.0
+START_COUNTDOWN_SECONDS = 3.0
 STREET_FILL_ALPHA = 165
 BLOCK_FILL_ALPHA = 195
 STREET_OUTLINE_ALPHA = 180
@@ -509,6 +510,7 @@ class GameView(arcade.View):
         self.player_grid_x = START_TILE[0]
         self.player_grid_y = START_TILE[1]
         self.player_step_timer = 0.0
+        self.start_countdown_timer = START_COUNTDOWN_SECONDS
         self.stoplight_timer = random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2)
         self.route = []
         self.route_index = 0
@@ -532,6 +534,7 @@ class GameView(arcade.View):
         self.client = None
         self.traffic_obstacle = None
         self.traffic_obstacle_tile = None
+        self.start_countdown_timer = START_COUNTDOWN_SECONDS
 
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
@@ -680,6 +683,9 @@ class GameView(arcade.View):
         self.entity_list.draw()
         self.player_list.draw()
 
+        if self.start_countdown_timer > 0.0:
+            self.draw_start_countdown()
+
         if self.game_over:
             arcade.draw_text(
                 "GAME OVER",
@@ -727,7 +733,34 @@ class GameView(arcade.View):
                     1,
                 )
 
+    def draw_start_countdown(self):
+        if self.start_countdown_timer > 2.0:
+            countdown_text = "3"
+            countdown_color = arcade.color.RED
+        elif self.start_countdown_timer > 1.0:
+            countdown_text = "2"
+            countdown_color = arcade.color.YELLOW
+        elif self.start_countdown_timer > 0.0:
+            countdown_text = "1"
+            countdown_color = arcade.color.GREEN
+        else:
+            countdown_text = "GO!"
+            countdown_color = arcade.color.GREEN
+
+        arcade.draw_text(
+            countdown_text,
+            WINDOW_WIDTH / 2,
+            WINDOW_HEIGHT / 2,
+            countdown_color,
+            64,
+            anchor_x="center",
+            anchor_y="center",
+        )
+
     def on_key_press(self, key, modifiers):
+        if self.start_countdown_timer > 0.0:
+            return
+
         if key == arcade.key.W:
             self.up_pressed = True
             self.player_step_timer = 0.0
@@ -792,6 +825,17 @@ class GameView(arcade.View):
 
     def on_update(self, delta_time):
         if self.game_over:
+            return
+
+        if self.start_countdown_timer > 0.0:
+            self.start_countdown_timer = max(0.0, self.start_countdown_timer - delta_time)
+            if self.start_countdown_timer == 0.0:
+                self.player_step_timer = 0.0
+                self.pending_direction = None
+                self.left_pressed = False
+                self.right_pressed = False
+                self.up_pressed = False
+                self.down_pressed = False
             return
 
         self.stoplight_timer += delta_time

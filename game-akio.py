@@ -224,12 +224,14 @@ class GameView(arcade.View):
         for y, row in enumerate(STREET_TILE_ROWS):
             for x, tile in enumerate(row):
                 center_x, center_y = grid_to_center(x, y)
-                left = center_x - GRID_CELL_WIDTH / 2
-                right = center_x + GRID_CELL_WIDTH / 2
-                bottom = center_y - GRID_CELL_HEIGHT / 2
-                top = center_y + GRID_CELL_HEIGHT / 2
                 color = arcade.color.DARK_SLATE_GRAY if tile == "#" else arcade.color.LIGHT_CORAL
-                arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, color)
+                arcade.draw_rectangle_filled(
+                    center_x,
+                    center_y,
+                    GRID_CELL_WIDTH,
+                    GRID_CELL_HEIGHT,
+                color
+            )
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W: self.up_pressed = True

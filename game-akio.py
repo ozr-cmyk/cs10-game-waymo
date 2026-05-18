@@ -1,6 +1,5 @@
 import random
 from functools import lru_cache
-
 import arcade
 from PIL import Image
 
@@ -95,17 +94,12 @@ ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
 RED_LIGHT_ENTITIES = {"car", "cyclist", "pedestrian"}
 TURN_WEIGHT = 2.0
 
-
+# --- Helper functions ---
 def grid_to_center(grid_x, grid_y):
     return (
         grid_x * GRID_CELL_WIDTH + GRID_CELL_WIDTH / 2,
         grid_y * GRID_CELL_HEIGHT + GRID_CELL_HEIGHT / 2,
     )
-
-
-def with_alpha(color, alpha):
-    return (color.r, color.g, color.b, alpha)
-
 
 @lru_cache(maxsize=None)
 def sprite_scale_to_two_tiles(texture_path):
@@ -113,12 +107,10 @@ def sprite_scale_to_two_tiles(texture_path):
         widest_side = max(image.size)
     return TWO_TILE_SIZE / widest_side
 
-
 def is_street_tile(grid_x, grid_y):
     if not (0 <= grid_x < GRID_COLS and 0 <= grid_y < GRID_ROWS):
         return False
     return STREET_TILE_ROWS[grid_y][grid_x] == "#"
-
 
 def random_street_tile():
     street_tiles = [
@@ -129,134 +121,130 @@ def random_street_tile():
     ]
     return random.choice(street_tiles)
 
-
-def random_street_tiles(excluded=None):
-    excluded = excluded or set()
-    return [
-        (grid_x, grid_y)
-        for grid_y, row in enumerate(STREET_TILE_ROWS)
-        for grid_x, tile in enumerate(row)
-        if tile == "#" and (grid_x, grid_y) not in excluded
-    ]
-
-
 def street_neighbors(grid_x, grid_y):
     neighbors = []
-
     for direction, (dx, dy) in DIRECTION_DELTAS.items():
         next_x = grid_x + dx
         next_y = grid_y + dy
         if is_street_tile(next_x, next_y):
             neighbors.append((direction, next_x, next_y))
-
     return neighbors
-
 
 def direction_to_angle(direction, facing):
     return DIRECTION_ANGLES[facing][direction]
 
-
 def choose_direction_with_turn_bias(current_direction, options):
     if len(options) <= 1:
         return options[0]
-
     weighted_options = []
     for option in options:
         direction = option[0]
         weight = TURN_WEIGHT if direction != current_direction else 1.0
         weighted_options.extend([option] * int(weight * 2))
-
     return random.choice(weighted_options)
 
-
-def is_intersection_tile(grid_x, grid_y):
-    return (
-        is_street_tile(grid_x, grid_y)
-        and is_street_tile(grid_x - 1, grid_y)
-        and is_street_tile(grid_x + 1, grid_y)
-        and is_street_tile(grid_x, grid_y - 1)
-        and is_street_tile(grid_x, grid_y + 1)
-    )
-
-
-def draw_stoplight(grid_x, grid_y, state="red"):
-    center_x, center_y = grid_to_center(grid_x, grid_y)
-
-    pole_height = GRID_CELL_HEIGHT * 1.8
-    pole_width = GRID_CELL_WIDTH * 0.08
-    housing_width = GRID_CELL_WIDTH * 0.32
-    housing_height = GRID_CELL_HEIGHT * 0.95
-    light_radius = min(GRID_CELL_WIDTH, GRID_CELL_HEIGHT) * 0.11
-
-    pole_color = arcade.color.DARK_SLATE_GRAY
-    housing_color = arcade.color.BLACK
-    inactive_color = arcade.color.DIM_GRAY
-    active_colors = {
-        "red": arcade.color.RED,
-        "green": arcade.color.GREEN,
-    }
-
-    pole_left = center_x - pole_width / 2
-    pole_bottom = center_y - GRID_CELL_HEIGHT * 0.25 - pole_height / 2
-    arcade.draw_lbwh_rectangle_filled(pole_left, pole_bottom, pole_width, pole_height, pole_color)
-
-    housing_left = center_x - housing_width / 2
-    housing_bottom = center_y + GRID_CELL_HEIGHT * 0.35 - housing_height / 2
-    arcade.draw_lbwh_rectangle_filled(housing_left, housing_bottom, housing_width, housing_height, housing_color)
-
-    light_offsets = (0.22, 0.0, -0.22)
-    light_states = ("red", "yellow", "green")
-
-    for offset, light_state in zip(light_offsets, light_states):
-        light_color = active_colors[light_state] if light_state == state else inactive_color
-        arcade.draw_circle_filled(center_x, housing_bottom + housing_height / 2 + (housing_height * offset), light_radius, light_color)
-
-
-def build_stoplights():
-    stoplights = []
-    intersection_count = 0
-
-    for grid_y in range(GRID_ROWS):
-        for grid_x in range(GRID_COLS):
-            if not is_intersection_tile(grid_x, grid_y):
-                continue
-
-            if intersection_count % 3 == 0:
-                stoplights.append(
-                    {
-                        "grid_x": grid_x,
-                        "grid_y": grid_y,
-                        "phase_offset": random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2),
-                    }
-                )
-
-            intersection_count += 1
-
-    return stoplights
-
-
-def draw_stoplights_every_third_intersection(stoplights, timer):
-    for stoplight in stoplights:
-        state = "green" if int((timer + stoplight["phase_offset"]) / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
-        draw_stoplight(stoplight["grid_x"], stoplight["grid_y"], state=state)
-
-
-def build_stoplight_lookup(stoplights):
-    return {(stoplight["grid_x"], stoplight["grid_y"]): stoplight for stoplight in stoplights}
-
-
-def stoplight_state_for_tile(grid_x, grid_y, stoplight_lookup, timer):
-    stoplight = stoplight_lookup.get((grid_x, grid_y))
-    if stoplight is None:
-        return None
-
-    return "green" if int((timer + stoplight["phase_offset"]) / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
-
-
+# --- Entity classes ---
 class MovingEntity(arcade.Sprite):
     def __init__(self, config):
         super().__init__(config["texture"], sprite_scale_to_two_tiles(config["texture"]))
-
         self.config = config
         self.name = config["name"]
-        self.facing = config["f
+        self.facing = config["facing"]
+        self.grid_x = 0
+        self.grid_y = 0
+        self.direction = random.choice(["up", "down", "left", "right"])
+        self.step_timer = 0.0
+        self.angle = direction_to_angle(self.direction, self.facing)
+
+    def get_speed(self):
+        if self.name == "cat":
+            return random.uniform(self.config["speed_min"], self.config["speed_max"])
+        return self.config["speed"]
+
+    def sync_to_grid(self):
+        self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
+
+    def step(self):
+        neighbors = street_neighbors(self.grid_x, self.grid_y)
+        if neighbors:
+            self.direction, self.grid_x, self.grid_y = choose_direction_with_turn_bias(self.direction, neighbors)
+            self.angle = direction_to_angle(self.direction, self.facing)
+        self.sync_to_grid()
+
+    def update(self, delta_time):
+        self.step_timer += delta_time
+        step_interval = 1.0 / self.get_speed()
+        while self.step_timer >= step_interval:
+            self.step_timer -= step_interval
+            self.step()
+
+# --- Client class ---
+class Client(arcade.Sprite):
+    VOICELINES = [
+        "It's taking a while...",
+        "Maybe I should have taken an über...",
+        "Hurry up, please!",
+        "This is taking too long!",
+    ]
+    def __init__(self, player_grid_pos):
+        super().__init__("client.png", sprite_scale_to_two_tiles("client.png"))
+        # Spawn far from player
+        while True:
+            self.grid_x, self.grid_y = random_street_tile()
+            px, py = player_grid_pos
+            if abs(self.grid_x - px) + abs(self.grid_y - py) > 5:
+                break
+        self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
+        self.chat_text = ""
+        self.chat_timer = 0.0
+        self.time_since_spawn = 0.0
+        self.next_voiceline_time = 1.0
+
+    def update(self, delta_time):
+        self.time_since_spawn += delta_time
+        self.chat_timer = max(0, self.chat_timer - delta_time)
+        if self.time_since_spawn >= self.next_voiceline_time:
+            if self.chat_text == "":
+                self.chat_text = "i need a waymo"
+                self.chat_timer = 3.0
+                self.next_voiceline_time = self.time_since_spawn + random.uniform(3, 6)
+            else:
+                self.chat_text = random.choice(Client.VOICELINES)
+                self.chat_timer = 3.0
+                self.next_voiceline_time = self.time_since_spawn + random.uniform(3, 6)
+
+    def draw_chat(self):
+        if self.chat_timer > 0:
+            arcade.draw_rectangle_filled(
+                self.center_x,
+                self.center_y + 40,
+                len(self.chat_text) * 10,
+                24,
+                arcade.color.WHITE_SMOKE
+            )
+            arcade.draw_text(
+                self.chat_text,
+                self.center_x - len(self.chat_text) * 5,
+                self.center_y + 32,
+                arcade.color.BLACK,
+                12
+            )
+
+# --- Game view ---
+class GameView(arcade.View):
+    def __init__(self):
+        super().__init__()
+        self.background_color = arcade.color.BLACK
+        self.left_pressed = False
+        self.right_pressed = False
+        self.up_pressed = False
+        self.down_pressed = False
+        self.player_grid_x = 0
+        self.player_grid_y = 0
+        self.player_step_timer = 0.0
+
+    def setup(self):
+        self.player_list = arcade.SpriteList()
+        self.entity_list = arcade.SpriteList()
+
+        self.player_sprite = arcade.Sprite("waymo.avif", sprite_scale

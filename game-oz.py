@@ -447,7 +447,7 @@ class GameView(arcade.View):
         self.stoplight_timer = random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2)
         self.route = []
         self.route_index = 0
-        self.autopilot = False
+        self.autopilot = True
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)
@@ -484,6 +484,8 @@ class GameView(arcade.View):
             self.player_sprite.angle = direction_to_angle(initial_direction, "left")
         else:
             self.player_sprite.angle = direction_to_angle("left", "left")
+
+        self.refresh_route_from_player()
 
         self.player_list.append(self.player_sprite)
 

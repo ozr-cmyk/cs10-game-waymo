@@ -566,6 +566,7 @@ class GameView(arcade.View):
         self.right_pressed = False
         self.up_pressed = False
         self.down_pressed = False
+        self.stop_pressed = False
         self.player_grid_x = START_TILE[0]
         self.player_grid_y = START_TILE[1]
         self.player_step_timer = 0.0
@@ -802,6 +803,16 @@ class GameView(arcade.View):
                 )
 
     def on_key_press(self, key, modifiers):
+        if key == arcade.key.SPACE:
+            self.stop_pressed = True
+            self.left_pressed = False
+            self.right_pressed = False
+            self.up_pressed = False
+            self.down_pressed = False
+            self.pending_direction = None
+            self.player_step_timer = 0.0
+            return
+
         if key == arcade.key.W:
             self.up_pressed = True
             self.player_step_timer = 0.0
@@ -820,6 +831,10 @@ class GameView(arcade.View):
             self.pending_direction = (1, 0)
 
     def on_key_release(self, key, modifiers):
+        if key == arcade.key.SPACE:
+            self.stop_pressed = False
+            return
+
         if key == arcade.key.W:
             self.up_pressed = False
         elif key == arcade.key.S:
@@ -923,7 +938,9 @@ class GameView(arcade.View):
         if self.client is not None:
             self.client.update(delta_time)
 
-        if self.autopilot and self.route:
+        if self.stop_pressed:
+            self.player_step_timer = 0.0
+        elif self.autopilot and self.route:
             self.player_step_timer += delta_time
             player_step_interval = 1.0 / WAYMO_TILES_PER_SECOND
 

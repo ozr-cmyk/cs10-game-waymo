@@ -221,7 +221,7 @@ class GameView(arcade.View):
             client.draw_chat()
 
     def draw_streets(self):
-    for y, row in enumerate(STREET_TILE_ROWS):
+        for y, row in enumerate(STREET_TILE_ROWS):
         for x, tile in enumerate(row):
             center_x, center_y = grid_to_center(x, y)
             left = center_x - GRID_CELL_WIDTH / 2

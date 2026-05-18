@@ -221,21 +221,15 @@ class GameView(arcade.View):
             client.draw_chat()
 
     def draw_streets(self):
-    for y, row in enumerate(STREET_TILE_ROWS):
-        for x, tile in enumerate(row):
-            center_x, center_y = grid_to_center(x, y)
-            left = center_x - GRID_CELL_WIDTH / 2
-            right = center_x + GRID_CELL_WIDTH / 2
-            bottom = center_y - GRID_CELL_HEIGHT / 2
-            top = center_y + GRID_CELL_HEIGHT / 2
-            color = arcade.color.DARK_SLATE_GRAY if tile == "#" else arcade.color.LIGHT_CORAL
-            arcade.draw_lrtb_rectangle_filled(
-            client.center_x - len(client.chat_text) * 5,
-            client.center_x + len(client.chat_text) * 5,
-            client.center_y + 44,
-            client.center_y + 32,
-            arcade.color.WHITE_SMOKE
-            )
+        for y, row in enumerate(STREET_TILE_ROWS):
+            for x, tile in enumerate(row):
+                center_x, center_y = grid_to_center(x, y)
+                left = center_x - GRID_CELL_WIDTH / 2
+                right = center_x + GRID_CELL_WIDTH / 2
+                bottom = center_y - GRID_CELL_HEIGHT / 2
+                top = center_y + GRID_CELL_HEIGHT / 2
+                color = arcade.color.DARK_SLATE_GRAY if tile == "#" else arcade.color.LIGHT_CORAL
+                arcade.draw_lrtb_rectangle_filled(left, right, top, bottom, color)
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W: self.up_pressed = True

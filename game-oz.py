@@ -560,6 +560,7 @@ class GameView(arcade.View):
         self.traffic_obstacle = None
         self.traffic_obstacle_list = arcade.SpriteList()
         self.traffic_obstacle_tile = None
+        self.victory = False
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)
@@ -577,6 +578,7 @@ class GameView(arcade.View):
         self.route_goal_tile = GOAL_TILE
         self.traffic_obstacle = None
         self.traffic_obstacle_tile = None
+        self.victory = False
 
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
@@ -716,11 +718,22 @@ class GameView(arcade.View):
         if self.game_over:
             arcade.draw_text(
                 "GAME OVER",
-                WINDOW_WIDTH/2,
-                WINDOW_HEIGHT/2,
+                WINDOW_WIDTH / 2,
+                WINDOW_HEIGHT / 2,
                 arcade.color.RED,
                 40,
                 anchor_x="center"
+            )
+
+        if self.victory:
+            arcade.draw_text(
+                "VICTORY",
+                WINDOW_WIDTH / 2,
+                WINDOW_HEIGHT / 2,
+                arcade.color.GREEN,
+                56,
+                anchor_x="center",
+                anchor_y="center",
             )
 
     def draw_streets(self):
@@ -811,6 +824,8 @@ class GameView(arcade.View):
             self.player_grid_y,
         )
         self.refresh_route_from_player()
+        if (self.player_grid_x, self.player_grid_y) == self.route_goal_tile:
+            self.victory = True
 
     def start_delivery_route(self):
         self.destination_tile = None
@@ -866,7 +881,7 @@ class GameView(arcade.View):
             self.start_delivery_route()
 
     def on_update(self, delta_time):
-        if self.game_over:
+        if self.game_over or self.victory:
             return
 
         self.stoplight_timer += delta_time

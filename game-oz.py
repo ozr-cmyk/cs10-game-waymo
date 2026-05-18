@@ -10,6 +10,7 @@ WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
 PLAYER_TILES_PER_SECOND = 8
+STOPLIGHT_PHASE_SECONDS = 7.0
 STREET_FILL_ALPHA = 165
 BLOCK_FILL_ALPHA = 195
 STREET_OUTLINE_ALPHA = 180
@@ -56,6 +57,13 @@ DIRECTION_ANGLES = {
     "left": {"left": 270, "down": 180, "right": 90, "up": 0},
 }
 
+OPPOSITE_DIRECTION = {
+    "up": "down",
+    "down": "up",
+    "left": "right",
+    "right": "left",
+}
+
 
 # --- Variants (SAFE VERSION) ---
 CAR = {
@@ -88,6 +96,8 @@ CAT = {
 }
 
 ENTITY_TYPES = [CAR, CYCLIST, PEDESTRIAN, CAT]
+RED_LIGHT_ENTITIES = {"car", "cyclist", "pedestrian"}
+TURN_WEIGHT = 2.0
 
 
 def grid_to_center(grid_x, grid_y):
@@ -124,6 +134,16 @@ def random_street_tile():
     return random.choice(street_tiles)
 
 
+def random_street_tiles(excluded=None):
+    excluded = excluded or set()
+    return [
+        (grid_x, grid_y)
+        for grid_y, row in enumerate(STREET_TILE_ROWS)
+        for grid_x, tile in enumerate(row)
+        if tile == "#" and (grid_x, grid_y) not in excluded
+    ]
+
+
 def street_neighbors(grid_x, grid_y):
     neighbors = []
 
@@ -138,6 +158,124 @@ def street_neighbors(grid_x, grid_y):
 
 def direction_to_angle(direction, facing):
     return DIRECTION_ANGLES[facing][direction]
+
+
+def choose_direction_with_turn_bias(current_direction, options):
+    """Prefer turning over continuing straight by 100% when both are possible."""
+    if len(options) <= 1:
+        return options[0]
+
+    weighted_options = []
+    for option in options:
+        direction = option[0]
+        weight = TURN_WEIGHT if direction != current_direction else 1.0
+        weighted_options.extend([option] * int(weight * 2))
+
+    return random.choice(weighted_options)
+
+
+def is_intersection_tile(grid_x, grid_y):
+    return (
+        is_street_tile(grid_x, grid_y)
+        and is_street_tile(grid_x - 1, grid_y)
+        and is_street_tile(grid_x + 1, grid_y)
+        and is_street_tile(grid_x, grid_y - 1)
+        and is_street_tile(grid_x, grid_y + 1)
+    )
+
+
+def draw_stoplight(grid_x, grid_y, state="red"):
+    """Draw a simple stoplight on top of the street grid."""
+    center_x, center_y = grid_to_center(grid_x, grid_y)
+
+    pole_height = GRID_CELL_HEIGHT * 1.8
+    pole_width = GRID_CELL_WIDTH * 0.08
+    housing_width = GRID_CELL_WIDTH * 0.32
+    housing_height = GRID_CELL_HEIGHT * 0.95
+    light_radius = min(GRID_CELL_WIDTH, GRID_CELL_HEIGHT) * 0.11
+
+    pole_color = arcade.color.DARK_SLATE_GRAY
+    housing_color = arcade.color.BLACK
+    inactive_color = arcade.color.DIM_GRAY
+    active_colors = {
+        "red": arcade.color.RED,
+        "green": arcade.color.GREEN,
+    }
+
+    pole_left = center_x - pole_width / 2
+    pole_bottom = center_y - GRID_CELL_HEIGHT * 0.25 - pole_height / 2
+    arcade.draw_lbwh_rectangle_filled(
+        pole_left,
+        pole_bottom,
+        pole_width,
+        pole_height,
+        pole_color,
+    )
+
+    housing_left = center_x - housing_width / 2
+    housing_bottom = center_y + GRID_CELL_HEIGHT * 0.35 - housing_height / 2
+    arcade.draw_lbwh_rectangle_filled(
+        housing_left,
+        housing_bottom,
+        housing_width,
+        housing_height,
+        housing_color,
+    )
+
+    light_offsets = (0.22, 0.0, -0.22)
+    light_states = ("red", "yellow", "green")
+
+    for offset, light_state in zip(light_offsets, light_states):
+        light_color = active_colors[light_state] if light_state == state else inactive_color
+        arcade.draw_circle_filled(
+            center_x,
+            housing_bottom + housing_height / 2 + (housing_height * offset),
+            light_radius,
+            light_color,
+        )
+
+
+def build_stoplights():
+    """Return the street intersections that should get stoplights."""
+    stoplights = []
+    intersection_count = 0
+
+    for grid_y in range(GRID_ROWS):
+        for grid_x in range(GRID_COLS):
+            if not is_intersection_tile(grid_x, grid_y):
+                continue
+
+            if intersection_count % 3 == 0:
+                stoplights.append(
+                    {
+                        "grid_x": grid_x,
+                        "grid_y": grid_y,
+                        "phase_offset": random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2),
+                    }
+                )
+
+            intersection_count += 1
+
+    return stoplights
+
+
+def draw_stoplights_every_third_intersection(stoplights, timer):
+    """Place stoplights on every third intersection tile."""
+    for stoplight in stoplights:
+        state = "green" if int((timer + stoplight["phase_offset"]) / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
+        draw_stoplight(stoplight["grid_x"], stoplight["grid_y"], state=state)
+
+
+def build_stoplight_lookup(stoplights):
+    return {(stoplight["grid_x"], stoplight["grid_y"]): stoplight for stoplight in stoplights}
+
+
+def stoplight_state_for_tile(grid_x, grid_y, stoplight_lookup, timer):
+    stoplight = stoplight_lookup.get((grid_x, grid_y))
+    if stoplight is None:
+        return None
+
+    return "green" if int((timer + stoplight["phase_offset"]) / STOPLIGHT_PHASE_SECONDS) % 2 else "red"
 
 
 class MovingEntity(arcade.Sprite):
@@ -165,31 +303,74 @@ class MovingEntity(arcade.Sprite):
     def sync_to_grid(self):
         self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
 
-    def step(self):
+    def step(self, occupied_tiles=None, stoplight_lookup=None, stoplight_timer=None):
+        blocked_tiles = set(occupied_tiles or ())
+        blocked_tiles.discard((self.grid_x, self.grid_y))
+
         dx, dy = DIRECTION_DELTAS[self.direction]
         next_x = self.grid_x + dx
         next_y = self.grid_y + dy
 
-        if not is_street_tile(next_x, next_y):
-            valid_neighbors = street_neighbors(self.grid_x, self.grid_y)
-            if not valid_neighbors:
+        if is_street_tile(next_x, next_y) and (next_x, next_y) not in blocked_tiles:
+            candidate_direction = self.direction
+            candidate_x = next_x
+            candidate_y = next_y
+        else:
+            valid_neighbors = [
+                (direction, neighbor_x, neighbor_y)
+                for direction, neighbor_x, neighbor_y in street_neighbors(self.grid_x, self.grid_y)
+                if (neighbor_x, neighbor_y) not in blocked_tiles
+                and direction != OPPOSITE_DIRECTION[self.direction]
+            ]
+
+            if valid_neighbors:
+                candidate_direction, candidate_x, candidate_y = choose_direction_with_turn_bias(
+                    self.direction,
+                    valid_neighbors,
+                )
+            else:
+                reverse_direction = OPPOSITE_DIRECTION[self.direction]
+                reverse_dx, reverse_dy = DIRECTION_DELTAS[reverse_direction]
+                reverse_x = self.grid_x + reverse_dx
+                reverse_y = self.grid_y + reverse_dy
+                if is_street_tile(reverse_x, reverse_y) and (reverse_x, reverse_y) not in blocked_tiles:
+                    candidate_direction = reverse_direction
+                    candidate_x = reverse_x
+                    candidate_y = reverse_y
+                else:
+                    self.sync_to_grid()
+                    return
+
+        if stoplight_lookup is not None and stoplight_timer is not None and self.name in RED_LIGHT_ENTITIES:
+            current_state = stoplight_state_for_tile(
+                self.grid_x,
+                self.grid_y,
+                stoplight_lookup,
+                stoplight_timer,
+            )
+            next_state = stoplight_state_for_tile(
+                candidate_x,
+                candidate_y,
+                stoplight_lookup,
+                stoplight_timer,
+            )
+            if current_state == "red" or next_state == "red":
                 self.sync_to_grid()
                 return
 
-            self.direction, next_x, next_y = random.choice(valid_neighbors)
-
-        self.grid_x = next_x
-        self.grid_y = next_y
+        self.direction = candidate_direction
+        self.grid_x = candidate_x
+        self.grid_y = candidate_y
         self.angle = direction_to_angle(self.direction, self.facing)
         self.sync_to_grid()
 
-    def update(self, delta_time):
+    def update(self, delta_time, occupied_tiles=None, stoplight_lookup=None, stoplight_timer=None):
         self.step_timer += delta_time
         step_interval = 1.0 / self.get_speed()
 
         while self.step_timer >= step_interval:
             self.step_timer -= step_interval
-            self.step()
+            self.step(occupied_tiles, stoplight_lookup, stoplight_timer)
 
         self.sync_to_grid()
 
@@ -205,6 +386,7 @@ class GameView(arcade.View):
         self.player_grid_x = 0
         self.player_grid_y = 0
         self.player_step_timer = 0.0
+        self.stoplight_timer = random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2)
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)
@@ -229,21 +411,25 @@ class GameView(arcade.View):
 
         self.player_list.append(self.player_sprite)
 
-        for _ in range(ENTITY_COUNT):
+        available_tiles = random_street_tiles(excluded={(self.player_grid_x, self.player_grid_y)})
+        for grid_x, grid_y in random.sample(available_tiles, ENTITY_COUNT):
             config = random.choice(ENTITY_TYPES)
 
             entity = MovingEntity(config)
-            entity.grid_x, entity.grid_y = random_street_tile()
+            entity.grid_x, entity.grid_y = grid_x, grid_y
             entity.sync_to_grid()
 
             self.entity_list.append(entity)
 
+        self.stoplights = build_stoplights()
+        self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
         self.game_over = False
 
     def on_draw(self):
         self.clear()
 
         self.draw_streets()
+        draw_stoplights_every_third_intersection(self.stoplights, self.stoplight_timer)
 
         self.entity_list.draw()
         self.player_list.draw()
@@ -353,7 +539,13 @@ class GameView(arcade.View):
         if self.game_over:
             return
 
-        self.entity_list.update(delta_time)
+        self.stoplight_timer += delta_time
+        occupied_tiles = {
+            (entity.grid_x, entity.grid_y)
+            for entity in self.entity_list
+        }
+        for entity in self.entity_list:
+            entity.update(delta_time, occupied_tiles, self.stoplight_lookup, self.stoplight_timer)
 
         if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
             self.player_step_timer = 0.0

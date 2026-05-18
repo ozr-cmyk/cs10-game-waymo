@@ -188,7 +188,7 @@ class GameView(arcade.View):
         self.client_list = arcade.SpriteList()
 
         # Player
-        self.player_sprite = arcade.Sprite("waymo.png", sprite_scale_to_two_tiles("waymo.png"))
+        self.player_sprite = arcade.Sprite("waymo.avif", sprite_scale_to_two_tiles("waymo.avif"))
         self.player_grid_x = 0
         self.player_grid_y = 0
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
@@ -260,7 +260,6 @@ class GameView(arcade.View):
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(next_x, next_y)
 
     def on_update(self, delta_time):
-        # Player movement
         dx, dy = self.get_player_direction()
         self.player_step_timer += delta_time
         step_interval = 1.0 / PLAYER_TILES_PER_SECOND
@@ -268,11 +267,9 @@ class GameView(arcade.View):
             self.player_step_timer -= step_interval
             self.move_player(dx, dy)
 
-        # Entities
         for entity in self.entity_list:
             entity.update(delta_time)
 
-        # Client
         for client in self.client_list:
             client.update(delta_time)
 

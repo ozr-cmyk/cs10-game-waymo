@@ -341,10 +341,10 @@ def draw_route(route):
 def choose_traffic_obstacle_tile(route, excluded=None):
     """Pick a route tile for the traffic obstacle, favoring the middle of the path."""
     excluded = excluded or set()
-    if len(route) < 3:
+    if len(route) <= 10:
         return None
 
-    preferred_tiles = [tile for tile in route[1:-1] if tile not in excluded]
+    preferred_tiles = [tile for tile in route[10:-1] if tile not in excluded]
     if len(preferred_tiles) >= 3:
         middle_tiles = preferred_tiles[1:-1]
         if middle_tiles:

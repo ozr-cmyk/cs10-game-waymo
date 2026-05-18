@@ -105,7 +105,6 @@ class MovingEntity(arcade.Sprite):
         self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
 
     def step(self):
-        # Simple random movement
         neighbors = []
         for d, (dx, dy) in DIRECTION_DELTAS.items():
             nx, ny = self.grid_x + dx, self.grid_y + dy
@@ -159,13 +158,13 @@ class Client(arcade.Sprite):
 
     def draw_chat(self):
         if self.chat_timer > 0:
-            arcade.draw_rectangle(center_x, center_y, width, height, color)
+            arcade.draw_rectangle(
                 self.center_x,
                 self.center_y + 40,
                 len(self.chat_text) * 10,
                 24,
                 arcade.color.WHITE_SMOKE
-
+            )
             arcade.draw_text(
                 self.chat_text,
                 self.center_x - len(self.chat_text) * 5,
@@ -199,7 +198,6 @@ class GameView(arcade.View):
         self.player_list.append(self.player_sprite)
 
         # Entities
-        available_tiles = random_street_tile(exclude={(self.player_grid_x, self.player_grid_y)})
         for _ in range(ENTITY_COUNT):
             config = random.choice(ENTITY_TYPES)
             entity = MovingEntity(config)
@@ -225,13 +223,13 @@ class GameView(arcade.View):
             for x, tile in enumerate(row):
                 center_x, center_y = grid_to_center(x, y)
                 color = arcade.color.DARK_SLATE_GRAY if tile == "#" else arcade.color.LIGHT_CORAL
-                arcade.draw_rectangle(center_x, center_y, width, height, color)
+                arcade.draw_rectangle(
                     center_x,
                     center_y,
                     GRID_CELL_WIDTH,
                     GRID_CELL_HEIGHT,
                     color
-                
+                )
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W: self.up_pressed = True
@@ -256,7 +254,8 @@ class GameView(arcade.View):
     def move_player(self, dx, dy):
         next_x = self.player_grid_x + dx
         next_y = self.player_grid_y + dy
-        if not is_street_tile(next_x, next_y): return
+        if not is_street_tile(next_x, next_y):
+            return
         self.player_grid_x = next_x
         self.player_grid_y = next_y
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(next_x, next_y)

@@ -230,8 +230,8 @@ class GameView(arcade.View):
                     center_y,
                     GRID_CELL_WIDTH,
                     GRID_CELL_HEIGHT,
-                color
-            )
+                    color
+                )
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W: self.up_pressed = True

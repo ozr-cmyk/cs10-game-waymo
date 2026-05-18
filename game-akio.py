@@ -158,7 +158,7 @@ class Client(arcade.Sprite):
 
     def draw_chat(self):
         if self.chat_timer > 0:
-            arcade.draw_rectangle(
+            arcade.draw_rect_filled(
                 self.center_x,
                 self.center_y + 40,
                 len(self.chat_text) * 10,
@@ -223,13 +223,7 @@ class GameView(arcade.View):
             for x, tile in enumerate(row):
                 center_x, center_y = grid_to_center(x, y)
                 color = arcade.color.DARK_SLATE_GRAY if tile == "#" else arcade.color.LIGHT_CORAL
-                arcade.draw_rectangle(
-                    center_x,
-                    center_y,
-                    GRID_CELL_WIDTH,
-                    GRID_CELL_HEIGHT,
-                    color
-                )
+                arcade.draw_rect_filled(center_x, center_y, GRID_CELL_WIDTH, GRID_CELL_HEIGHT, color)
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W: self.up_pressed = True
@@ -254,14 +248,12 @@ class GameView(arcade.View):
     def move_player(self, dx, dy):
         next_x = self.player_grid_x + dx
         next_y = self.player_grid_y + dy
-        if not is_street_tile(next_x, next_y):
-            return
+        if not is_street_tile(next_x, next_y): return
         self.player_grid_x = next_x
         self.player_grid_y = next_y
         self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(next_x, next_y)
 
     def on_update(self, delta_time):
-        # Player movement
         dx, dy = self.get_player_direction()
         self.player_step_timer += delta_time
         step_interval = 1.0 / PLAYER_TILES_PER_SECOND
@@ -269,11 +261,8 @@ class GameView(arcade.View):
             self.player_step_timer -= step_interval
             self.move_player(dx, dy)
 
-        # Entities
         for entity in self.entity_list:
             entity.update(delta_time)
-
-        # Client
         for client in self.client_list:
             client.update(delta_time)
 

@@ -105,7 +105,7 @@ CLIENT_MESSAGES = [
 CLIENT = {
     "name": "client",
     "texture": "pedestrian.png",
-    "speed": 0,
+    "speed": 1,
     "facing": "right",
     "messages": CLIENT_MESSAGES,
 }

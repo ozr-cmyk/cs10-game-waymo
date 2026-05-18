@@ -469,6 +469,7 @@ class GameView(arcade.View):
         self.autopilot = True
         self.pending_direction = None
         self.traffic_obstacle = None
+        self.traffic_obstacle_list = arcade.SpriteList()
         self.traffic_obstacle_tile = None
 
     def on_show_view(self):
@@ -477,6 +478,7 @@ class GameView(arcade.View):
     def setup(self):
         self.player_list = arcade.SpriteList()
         self.entity_list = arcade.SpriteList()
+        self.traffic_obstacle_list = arcade.SpriteList()
         self.traffic_obstacle = None
         self.traffic_obstacle_tile = None
 
@@ -534,6 +536,7 @@ class GameView(arcade.View):
             self.traffic_obstacle.center_x, self.traffic_obstacle.center_y = grid_to_center(
                 *self.traffic_obstacle_tile
             )
+            self.traffic_obstacle_list.append(self.traffic_obstacle)
 
         self.stoplights = build_stoplights()
         self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
@@ -575,8 +578,7 @@ class GameView(arcade.View):
         draw_route(self.route[self.route_index:])
         draw_stoplights_every_third_intersection(self.stoplights, self.stoplight_timer)
 
-        if self.traffic_obstacle is not None:
-            self.traffic_obstacle.draw()
+        self.traffic_obstacle_list.draw()
 
         self.entity_list.draw()
         self.player_list.draw()

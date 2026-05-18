@@ -556,6 +556,7 @@ class GameView(arcade.View):
         self.client_list = arcade.SpriteList()
         self.destination_tile = None
         self.destination = None
+        self.destination_list = arcade.SpriteList()
         self.traffic_obstacle = None
         self.traffic_obstacle_list = arcade.SpriteList()
         self.traffic_obstacle_tile = None
@@ -570,6 +571,7 @@ class GameView(arcade.View):
         self.traffic_obstacle_list = arcade.SpriteList()
         self.destination_tile = None
         self.destination = None
+        self.destination_list = arcade.SpriteList()
         self.client = None
         self.client_picked_up = False
         self.route_goal_tile = GOAL_TILE
@@ -702,8 +704,8 @@ class GameView(arcade.View):
         if self.client is not None:
             self.client.draw_chat()
 
-        if self.client_picked_up and self.destination is not None:
-            self.destination.draw()
+        if self.client_picked_up:
+            self.destination_list.draw()
 
         if self.should_show_traffic_obstacle():
             self.traffic_obstacle_list.draw()
@@ -813,6 +815,7 @@ class GameView(arcade.View):
     def start_delivery_route(self):
         self.destination_tile = None
         self.destination = None
+        self.destination_list = arcade.SpriteList()
 
         occupied_tiles = {
             (entity.grid_x, entity.grid_y)
@@ -836,6 +839,7 @@ class GameView(arcade.View):
         self.destination.center_x, self.destination.center_y = grid_to_center(
             *destination_tile
         )
+        self.destination_list.append(self.destination)
         self.route_goal_tile = destination_tile
         self.route = shortest_route_between_tiles(current_tile, self.route_goal_tile)
         self.route_index = 0

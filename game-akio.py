@@ -229,7 +229,7 @@ class GameView(arcade.View):
                 bottom = center_y - GRID_CELL_HEIGHT / 2
                 top = center_y + GRID_CELL_HEIGHT / 2
                 color = arcade.color.DARK_SLATE_GRAY if tile == "#" else arcade.color.LIGHT_CORAL
-                arcade.draw_lrtb_rectangle_filled(left, right, top, bottom, color)
+                arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, color)
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W: self.up_pressed = True

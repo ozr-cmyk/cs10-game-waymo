@@ -508,6 +508,7 @@ class GameView(arcade.View):
         self.stoplight_timer = random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2)
         self.route = []
         self.route_index = 0
+        self.route_goal_tile = GOAL_TILE
         self.autopilot = True
         self.pending_direction = None
         self.client = None
@@ -539,25 +540,10 @@ class GameView(arcade.View):
             self.player_grid_x,
             self.player_grid_y,
         )
-        self.route = shortest_route_between_tiles(START_TILE, GOAL_TILE)
+        self.route = []
         self.route_index = 0
-
-        if len(self.route) >= 2:
-            first_step_x = self.route[1][0] - self.route[0][0]
-            first_step_y = self.route[1][1] - self.route[0][1]
-            if first_step_x > 0:
-                initial_direction = "right"
-            elif first_step_x < 0:
-                initial_direction = "left"
-            elif first_step_y > 0:
-                initial_direction = "up"
-            else:
-                initial_direction = "down"
-            self.player_sprite.angle = direction_to_angle(initial_direction, "left")
-        else:
-            self.player_sprite.angle = direction_to_angle("left", "left")
-
-        self.refresh_route_from_player()
+        self.route_goal_tile = GOAL_TILE
+        self.player_sprite.angle = direction_to_angle("left", "left")
 
         self.player_list.append(self.player_sprite)
 
@@ -581,6 +567,9 @@ class GameView(arcade.View):
         self.client_list.append(self.client)
         occupied_tiles.add(client_tile)
 
+        self.refresh_route_from_player()
+        self.face_player_toward_next_route_tile()
+
         self.traffic_obstacle_tile = choose_traffic_obstacle_tile(self.route, excluded=occupied_tiles)
         if self.traffic_obstacle_tile is not None:
             base_scale = sprite_scale_to_two_tiles(TRAFFIC_OBSTACLE_TEXTURE)
@@ -597,20 +586,48 @@ class GameView(arcade.View):
         self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
         self.game_over = False
 
+    def get_route_goal_tile(self):
+        if self.client is not None:
+            return (self.client.grid_x, self.client.grid_y)
+        return GOAL_TILE
+
+    def face_player_toward_next_route_tile(self):
+        if not self.route or self.route_index >= len(self.route) - 1:
+            return
+
+        current_tile = self.route[self.route_index]
+        next_tile = self.route[self.route_index + 1]
+        dx = next_tile[0] - current_tile[0]
+        dy = next_tile[1] - current_tile[1]
+
+        if dx > 0:
+            direction = "right"
+        elif dx < 0:
+            direction = "left"
+        elif dy > 0:
+            direction = "up"
+        else:
+            direction = "down"
+
+        self.player_sprite.angle = direction_to_angle(direction, "left")
+
     def refresh_route_from_player(self):
         current_tile = (self.player_grid_x, self.player_grid_y)
+        goal_tile = self.get_route_goal_tile()
 
-        if not self.route:
-            self.route = shortest_route_between_tiles(current_tile, GOAL_TILE)
+        if not self.route or self.route_goal_tile != goal_tile:
+            self.route = shortest_route_between_tiles(current_tile, goal_tile)
             self.route_index = 0
+            self.route_goal_tile = goal_tile
             return
 
         if current_tile in self.route:
             self.route_index = self.route.index(current_tile)
             return
 
-        self.route = shortest_route_between_tiles(current_tile, GOAL_TILE)
+        self.route = shortest_route_between_tiles(current_tile, goal_tile)
         self.route_index = 0
+        self.route_goal_tile = goal_tile
 
     def should_show_traffic_obstacle(self):
         if self.traffic_obstacle is None or not self.route:

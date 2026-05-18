@@ -448,6 +448,7 @@ class GameView(arcade.View):
         self.route = []
         self.route_index = 0
         self.autopilot = True
+        self.pending_direction = None
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)
@@ -593,15 +594,19 @@ class GameView(arcade.View):
         if key == arcade.key.W:
             self.up_pressed = True
             self.player_step_timer = 0.0
+            self.pending_direction = (0, 1)
         elif key == arcade.key.S:
             self.down_pressed = True
             self.player_step_timer = 0.0
+            self.pending_direction = (0, -1)
         elif key == arcade.key.A:
             self.left_pressed = True
             self.player_step_timer = 0.0
+            self.pending_direction = (-1, 0)
         elif key == arcade.key.D:
             self.right_pressed = True
             self.player_step_timer = 0.0
+            self.pending_direction = (1, 0)
 
     def on_key_release(self, key, modifiers):
         if key == arcade.key.W:
@@ -663,15 +668,15 @@ class GameView(arcade.View):
         if self.autopilot and self.route:
             self.player_step_timer += delta_time
             player_step_interval = 1.0 / WAYMO_TILES_PER_SECOND
-            move_x, move_y = self.get_player_direction()
 
             while self.player_step_timer >= player_step_interval:
                 self.player_step_timer -= player_step_interval
+                move_x, move_y = self.pending_direction or self.get_player_direction()
                 if move_x or move_y:
                     self.move_player(move_x, move_y)
+                    self.pending_direction = None
                 else:
                     self.advance_route()
-                move_x, move_y = self.get_player_direction()
         else:
             if not (self.up_pressed or self.down_pressed or self.left_pressed or self.right_pressed):
                 self.player_step_timer = 0.0

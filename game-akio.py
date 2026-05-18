@@ -159,18 +159,18 @@ class Client(arcade.Sprite):
     def draw_chat(self):
         if self.chat_timer > 0:
             arcade.draw_rect_filled(
-                center_x=self.center_x,
-                center_y=self.center_y + 40,
-                width=len(self.chat_text) * 10,
-                height=24,
-                color=arcade.color.WHITE_SMOKE
+                self.center_x,
+                self.center_y + 40,
+                len(self.chat_text) * 10,
+                24,
+                arcade.color.WHITE_SMOKE
             )
             arcade.draw_text(
                 self.chat_text,
-                start_x=self.center_x - len(self.chat_text) * 5,
-                start_y=self.center_y + 32,
-                color=arcade.color.BLACK,
-                font_size=12
+                self.center_x - len(self.chat_text) * 5,
+                self.center_y + 32,
+                arcade.color.BLACK,
+                12
             )
 
 # --- GameView ---
@@ -223,13 +223,7 @@ class GameView(arcade.View):
             for x, tile in enumerate(row):
                 center_x, center_y = grid_to_center(x, y)
                 color = arcade.color.DARK_SLATE_GRAY if tile == "#" else arcade.color.LIGHT_CORAL
-                arcade.draw_rect_filled(
-                    center_x=center_x,
-                    center_y=center_y,
-                    width=GRID_CELL_WIDTH,
-                    height=GRID_CELL_HEIGHT,
-                    color=color
-                )
+                arcade.draw_rect_filled(center_x, center_y, GRID_CELL_WIDTH, GRID_CELL_HEIGHT, color)
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W: self.up_pressed = True
@@ -275,12 +269,7 @@ class GameView(arcade.View):
 
 # --- Run ---
 def main():
-    window = arcade.Window(
-        width=WINDOW_WIDTH,
-        height=WINDOW_HEIGHT,
-        title=WINDOW_TITLE,
-        gl_version=(3, 3)
-    )
+    window = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
     game = GameView()
     game.setup()
     window.show_view(game)

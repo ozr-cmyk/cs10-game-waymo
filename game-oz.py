@@ -857,8 +857,7 @@ class GameView(arcade.View):
         if arcade.check_for_collision(self.player_sprite, self.client):
             self.client_picked_up = True
             self.delivery_route_pending = True
-            self.client.visible = False
-            self.client.alpha = 0
+            self.client.remove_from_sprite_lists()
             self.client = None
             self.pending_direction = None
             self.player_step_timer = 0.0

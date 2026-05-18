@@ -447,6 +447,7 @@ class GameView(arcade.View):
         self.stoplight_timer = random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2)
         self.route = []
         self.route_index = 0
+        self.autopilot = False
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)
@@ -636,7 +637,7 @@ class GameView(arcade.View):
         for entity in self.entity_list:
             entity.update(delta_time, occupied_tiles, self.stoplight_lookup, self.stoplight_timer)
 
-        if self.route:
+        if self.autopilot and self.route:
             self.player_step_timer += delta_time
             player_step_interval = 1.0 / PLAYER_TILES_PER_SECOND
 

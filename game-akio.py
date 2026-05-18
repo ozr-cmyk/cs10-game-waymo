@@ -108,7 +108,7 @@ GOAL_TILE = (GRID_COLS - 1, GRID_ROWS - 1)
 CLIENT = {
     "name": "client",
     "texture": "client.png",
-    "scale": 2 / 3,
+    "scale": 1 / 2,
     "messages": ["I need a Waymo", "It's taking a while", "I should've taken an Uber"],
     "facing": "right",
 }

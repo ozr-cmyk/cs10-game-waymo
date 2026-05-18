@@ -469,7 +469,6 @@ class GameView(arcade.View):
         self.route_index = 0
         self.autopilot = True
         self.pending_direction = None
-        self.last_move_direction = None
         self.traffic_obstacle = None
         self.traffic_obstacle_list = arcade.SpriteList()
         self.traffic_obstacle_tile = None
@@ -700,7 +699,6 @@ class GameView(arcade.View):
             self.player_grid_x,
             self.player_grid_y,
         )
-        self.last_move_direction = (dx, dy)
         self.refresh_route_from_player()
 
     def get_player_direction(self):
@@ -734,15 +732,7 @@ class GameView(arcade.View):
                 self.player_step_timer -= player_step_interval
                 move_x, move_y = self.pending_direction or self.get_player_direction()
                 if move_x or move_y:
-                    previous_move_direction = self.last_move_direction
                     self.move_player(move_x, move_y)
-                    if previous_move_direction and (move_x, move_y) == (
-                        -previous_move_direction[0],
-                        -previous_move_direction[1],
-                    ):
-                        self.pending_direction = (move_x, move_y)
-                    else:
-                        self.pending_direction = None
                 else:
                     self.advance_route()
         else:

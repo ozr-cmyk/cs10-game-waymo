@@ -591,13 +591,21 @@ class GameView(arcade.View):
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.W:
+            self.autopilot = False
             self.up_pressed = True
+            self.player_step_timer = 0.0
         elif key == arcade.key.S:
+            self.autopilot = False
             self.down_pressed = True
+            self.player_step_timer = 0.0
         elif key == arcade.key.A:
+            self.autopilot = False
             self.left_pressed = True
+            self.player_step_timer = 0.0
         elif key == arcade.key.D:
+            self.autopilot = False
             self.right_pressed = True
+            self.player_step_timer = 0.0
 
     def on_key_release(self, key, modifiers):
         if key == arcade.key.W:

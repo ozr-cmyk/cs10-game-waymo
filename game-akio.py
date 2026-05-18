@@ -241,4 +241,133 @@ class GameView(arcade.View):
         self.down_pressed = False
         self.player_grid_x = 0
         self.player_grid_y = 0
-        self.player_step_timer =
+                self.player_step_timer = 0.0
+        self.stoplight_timer = random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2)
+
+    def setup(self):
+        self.player_list = arcade.SpriteList()
+        self.entity_list = arcade.SpriteList()
+        self.client_list = arcade.SpriteList()
+
+        # Player sprite
+        self.player_sprite = arcade.Sprite(
+            "waymo.avif",
+            sprite_scale_to_two_tiles("waymo.avif")
+        )
+        self.player_grid_x = 0
+        self.player_grid_y = 0
+        self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
+            self.player_grid_x, self.player_grid_y
+        )
+        self.player_sprite.angle = direction_to_angle("left", "left")
+        self.player_list.append(self.player_sprite)
+
+        # Spawn other entities
+        available_tiles = random_street_tiles(excluded={(self.player_grid_x, self.player_grid_y)})
+        for grid_x, grid_y in random.sample(available_tiles, ENTITY_COUNT):
+            config = random.choice(ENTITY_TYPES)
+            entity = MovingEntity(config)
+            entity.grid_x, entity.grid_y = grid_x, grid_y
+            entity.sync_to_grid()
+            self.entity_list.append(entity)
+
+        # Spawn client
+        self.client = Client((self.player_grid_x, self.player_grid_y))
+        self.client_list.append(self.client)
+
+    def on_draw(self):
+        self.clear()
+        self.draw_streets()
+        self.entity_list.draw()
+        self.player_list.draw()
+        self.client_list.draw()
+
+        # Draw client chat bubbles
+        for client in self.client_list:
+            client.draw_chat()
+
+    def draw_streets(self):
+        for col in range(GRID_COLS):
+            for row in range(GRID_ROWS):
+                center_x, center_y = grid_to_center(col, row)
+                left = center_x - (GRID_CELL_WIDTH - 2) / 2
+                bottom = center_y - (GRID_CELL_HEIGHT - 2) / 2
+                if is_street_tile(col, row):
+                    fill_color = arcade.color.DARK_SLATE_GRAY
+                    outline_color = arcade.color.DIM_GRAY
+                else:
+                    fill_color = arcade.color.LIGHT_CORAL
+                    outline_color = arcade.color.DARK_RED
+                arcade.draw_rectangle_filled(
+                    center_x, center_y, GRID_CELL_WIDTH - 2, GRID_CELL_HEIGHT - 2, fill_color
+                )
+                arcade.draw_rectangle_outline(
+                    center_x, center_y, GRID_CELL_WIDTH - 2, GRID_CELL_HEIGHT - 2, outline_color, 1
+                )
+
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.W: self.up_pressed = True
+        if key == arcade.key.S: self.down_pressed = True
+        if key == arcade.key.A: self.left_pressed = True
+        if key == arcade.key.D: self.right_pressed = True
+
+    def on_key_release(self, key, modifiers):
+        if key == arcade.key.W: self.up_pressed = False
+        if key == arcade.key.S: self.down_pressed = False
+        if key == arcade.key.A: self.left_pressed = False
+        if key == arcade.key.D: self.right_pressed = False
+
+    def get_player_direction(self):
+        dx = 0
+        dy = 0
+        if self.up_pressed: dy = 1
+        if self.down_pressed: dy = -1
+        if self.left_pressed: dx = -1
+        if self.right_pressed: dx = 1
+        return dx, dy
+
+    def move_player(self, dx, dy):
+        next_x = self.player_grid_x + dx
+        next_y = self.player_grid_y + dy
+        if not is_street_tile(next_x, next_y):
+            return
+        self.player_grid_x = next_x
+        self.player_grid_y = next_y
+        self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
+            self.player_grid_x, self.player_grid_y
+        )
+        # Update player angle
+        if dx > 0: direction = "right"
+        elif dx < 0: direction = "left"
+        elif dy > 0: direction = "up"
+        elif dy < 0: direction = "down"
+        else: direction = "left"
+        self.player_sprite.angle = direction_to_angle(direction, "left")
+
+    def on_update(self, delta_time):
+        # Update player movement
+        dx, dy = self.get_player_direction()
+        self.player_step_timer += delta_time
+        step_interval = 1.0 / PLAYER_TILES_PER_SECOND
+        while self.player_step_timer >= step_interval:
+            self.player_step_timer -= step_interval
+            self.move_player(dx, dy)
+
+        # Update entities
+        for entity in self.entity_list:
+            entity.update(delta_time)
+
+        # Update client
+        for client in self.client_list:
+            client.update(delta_time)
+
+# --- Run the game ---
+def main():
+    window = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
+    game_view = GameView()
+    game_view.setup()
+    window.show_view(game_view)
+    arcade.run()
+
+if __name__ == "__main__":
+    main()

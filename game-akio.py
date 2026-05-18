@@ -107,7 +107,7 @@ GOAL_TILE = (GRID_COLS - 1, GRID_ROWS - 1)
 # --- Client configuration ---
 CLIENT = {
     "name": "client",
-    "texture": "pedestrian.png",
+    "texture": "client.png",
     "messages": ["I need a Waymo", "It's taking a while", "I should've taken an Uber"],
     "facing": "right",
 }

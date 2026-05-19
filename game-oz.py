@@ -428,22 +428,6 @@ def draw_timer_graphic(seconds_remaining, seconds_total=DELIVERY_TIME_LIMIT_SECO
     else:
         fill_color = arcade.color.ORANGE_RED
 
-    arcade.draw_rectangle_filled(
-        center_x,
-        center_y,
-        panel_width,
-        panel_height,
-        (20, 24, 34, 210),
-    )
-    arcade.draw_rectangle_outline(
-        center_x,
-        center_y,
-        panel_width,
-        panel_height,
-        arcade.color.WHITE,
-        2,
-    )
-
     icon_x = left + 28
     icon_y = center_y
     arcade.draw_circle_outline(icon_x, icon_y, 15, arcade.color.WHITE, 2)
@@ -454,23 +438,39 @@ def draw_timer_graphic(seconds_remaining, seconds_total=DELIVERY_TIME_LIMIT_SECO
     bar_bottom = bottom + 18
     bar_width = panel_width - 72
     bar_height = 16
-    arcade.draw_rectangle_filled(
-        bar_left + bar_width / 2,
-        bar_bottom + bar_height / 2,
+    arcade.draw_lbwh_rectangle_filled(
+        left,
+        bottom,
+        panel_width,
+        panel_height,
+        (20, 24, 34, 210),
+    )
+    arcade.draw_lbwh_rectangle_outline(
+        left,
+        bottom,
+        panel_width,
+        panel_height,
+        arcade.color.WHITE,
+        2,
+    )
+
+    arcade.draw_lbwh_rectangle_filled(
+        bar_left,
+        bar_bottom,
         bar_width,
         bar_height,
         (255, 255, 255, 45),
     )
-    arcade.draw_rectangle_filled(
-        bar_left + (bar_width * progress) / 2,
-        bar_bottom + bar_height / 2,
+    arcade.draw_lbwh_rectangle_filled(
+        bar_left,
+        bar_bottom,
         bar_width * progress,
         bar_height,
         fill_color,
     )
-    arcade.draw_rectangle_outline(
-        bar_left + bar_width / 2,
-        bar_bottom + bar_height / 2,
+    arcade.draw_lbwh_rectangle_outline(
+        bar_left,
+        bar_bottom,
         bar_width,
         bar_height,
         arcade.color.WHITE,

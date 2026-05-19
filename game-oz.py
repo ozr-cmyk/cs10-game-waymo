@@ -1018,7 +1018,7 @@ class WarningView(arcade.View):
                 bold=True,
             )
 
-     def on_key_press(self, key, modifiers):
+    def on_key_press(self, key, modifiers):
         if key == arcade.key.ENTER:
             game_view = GameView()
             game_view.setup()

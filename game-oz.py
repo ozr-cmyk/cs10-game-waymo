@@ -753,10 +753,11 @@ class TitleView(arcade.View):
         arcade.draw_lrbt_rectangle_filled(
             0,
             WINDOW_WIDTH,
-            WINDOW_HEIGHT,
             0,
+            WINDOW_HEIGHT,
             (8, 10, 20),
         )
+
 
         # Neon glow background circles
         for i in range(25):

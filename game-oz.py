@@ -804,12 +804,7 @@ class GameView(arcade.View):
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.SPACE:
-            self.stop_pressed = True
-            self.left_pressed = False
-            self.right_pressed = False
-            self.up_pressed = False
-            self.down_pressed = False
-            self.pending_direction = None
+            self.stop_pressed = not self.stop_pressed
             self.player_step_timer = 0.0
             return
 
@@ -831,10 +826,6 @@ class GameView(arcade.View):
             self.pending_direction = (1, 0)
 
     def on_key_release(self, key, modifiers):
-        if key == arcade.key.SPACE:
-            self.stop_pressed = False
-            return
-
         if key == arcade.key.W:
             self.up_pressed = False
         elif key == arcade.key.S:

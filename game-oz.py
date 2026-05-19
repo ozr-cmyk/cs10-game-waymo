@@ -1242,11 +1242,11 @@ class GameView(arcade.View):
             if self.time_remaining_seconds <= 0.0:
                 self.game_over = True
 
-                if self.hud_badge_timer > 0.0:
-                    self.hud_badge_timer = max(0.0, self.hud_badge_timer - delta_time)
+        if self.hud_badge_timer > 0.0:
+            self.hud_badge_timer = max(0.0, self.hud_badge_timer - delta_time)
 
-                if not self.victory:
-                    self.time_remaining_seconds = max(0.0, self.time_remaining_seconds - delta_time)
+        if not self.victory:
+            self.time_remaining_seconds = max(0.0, self.time_remaining_seconds - delta_time)
             if self.time_remaining_seconds <= 0.0:
                 self.game_over = True
 

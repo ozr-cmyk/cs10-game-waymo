@@ -1020,10 +1020,9 @@ class WarningView(arcade.View):
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ENTER:
-            game_view = GameView()
-            game_view.setup()
-            self.window.show_view(game_view)
-            
+            warning_view = WarningView()
+            self.window.show_view(warning_view)
+
 class GameView(arcade.View):
     def __init__(self):
         super().__init__()

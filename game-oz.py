@@ -14,6 +14,7 @@ WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Stable Traffic Variants Game"
 WAYMO_TILES_PER_SECOND = 4
 STOPLIGHT_PHASE_SECONDS = 7.0
+DELIVERY_TIME_LIMIT_SECONDS = 45.0
 STREET_FILL_ALPHA = 165
 BLOCK_FILL_ALPHA = 195
 STREET_OUTLINE_ALPHA = 180
@@ -407,6 +408,93 @@ def draw_route(route):
         arcade.draw_circle_filled(center_x, center_y, min(GRID_CELL_WIDTH, GRID_CELL_HEIGHT) * 0.08, node_color)
 
 
+def draw_timer_graphic(seconds_remaining, seconds_total=DELIVERY_TIME_LIMIT_SECONDS):
+    """Draw the delivery countdown in the top-right corner."""
+    panel_width = 230
+    panel_height = 72
+    margin = 18
+    right = WINDOW_WIDTH - margin
+    top = WINDOW_HEIGHT - margin
+    left = right - panel_width
+    bottom = top - panel_height
+    center_x = left + panel_width / 2
+    center_y = bottom + panel_height / 2
+
+    progress = 0.0 if seconds_total <= 0 else max(0.0, min(1.0, seconds_remaining / seconds_total))
+    if progress > 0.5:
+        fill_color = arcade.color.LIGHT_GREEN
+    elif progress > 0.2:
+        fill_color = arcade.color.GOLD
+    else:
+        fill_color = arcade.color.ORANGE_RED
+
+    arcade.draw_rectangle_filled(
+        center_x,
+        center_y,
+        panel_width,
+        panel_height,
+        (20, 24, 34, 210),
+    )
+    arcade.draw_rectangle_outline(
+        center_x,
+        center_y,
+        panel_width,
+        panel_height,
+        arcade.color.WHITE,
+        2,
+    )
+
+    icon_x = left + 28
+    icon_y = center_y
+    arcade.draw_circle_outline(icon_x, icon_y, 15, arcade.color.WHITE, 2)
+    arcade.draw_line(icon_x, icon_y, icon_x, icon_y + 7, arcade.color.WHITE, 2)
+    arcade.draw_line(icon_x, icon_y, icon_x + 5, icon_y - 3, arcade.color.WHITE, 2)
+
+    bar_left = left + 52
+    bar_bottom = bottom + 18
+    bar_width = panel_width - 72
+    bar_height = 16
+    arcade.draw_rectangle_filled(
+        bar_left + bar_width / 2,
+        bar_bottom + bar_height / 2,
+        bar_width,
+        bar_height,
+        (255, 255, 255, 45),
+    )
+    arcade.draw_rectangle_filled(
+        bar_left + (bar_width * progress) / 2,
+        bar_bottom + bar_height / 2,
+        bar_width * progress,
+        bar_height,
+        fill_color,
+    )
+    arcade.draw_rectangle_outline(
+        bar_left + bar_width / 2,
+        bar_bottom + bar_height / 2,
+        bar_width,
+        bar_height,
+        arcade.color.WHITE,
+        1,
+    )
+
+    time_text = f"{max(0, int(seconds_remaining + 0.999))}s"
+    arcade.draw_text(
+        time_text,
+        left + 52,
+        bottom + 38,
+        arcade.color.WHITE,
+        18,
+        bold=True,
+    )
+    arcade.draw_text(
+        "TO DESTINATION",
+        left + 52,
+        bottom + 18,
+        arcade.color.LIGHT_GRAY,
+        9,
+    )
+
+
 def choose_traffic_obstacle_tile(route, excluded=None, goal_tile=None):
     """Pick a route tile for the traffic obstacle, favoring the middle of the path."""
     excluded = excluded or set()
@@ -571,6 +659,8 @@ class GameView(arcade.View):
         self.player_grid_y = START_TILE[1]
         self.player_step_timer = 0.0
         self.stoplight_timer = random.uniform(0.0, STOPLIGHT_PHASE_SECONDS * 2)
+        self.time_limit_seconds = DELIVERY_TIME_LIMIT_SECONDS
+        self.time_remaining_seconds = DELIVERY_TIME_LIMIT_SECONDS
         self.route = []
         self.route_index = 0
         self.autopilot = True
@@ -604,6 +694,7 @@ class GameView(arcade.View):
         self.traffic_obstacle = None
         self.traffic_obstacle_tile = None
         self.victory = False
+        self.time_remaining_seconds = self.time_limit_seconds
 
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
@@ -764,6 +855,8 @@ class GameView(arcade.View):
                 anchor_x="center",
                 anchor_y="center",
             )
+
+        draw_timer_graphic(self.time_remaining_seconds, self.time_limit_seconds)
 
     def draw_streets(self):
         for col in range(GRID_COLS):
@@ -970,6 +1063,11 @@ class GameView(arcade.View):
             self.traffic_obstacle,
         ):
             self.game_over = True
+
+        if not self.victory:
+            self.time_remaining_seconds = max(0.0, self.time_remaining_seconds - delta_time)
+            if self.time_remaining_seconds <= 0.0:
+                self.game_over = True
 
 
 def main():

@@ -1323,10 +1323,12 @@ class GameView(arcade.View):
 
 def main():
     window = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE)
-    game = GameView()
-    game.setup()
-    window.show_view(game)
+
+    title_view = TitleView()
+    window.show_view(title_view)
+
     arcade.run()
+
 
 
 if __name__ == "__main__":

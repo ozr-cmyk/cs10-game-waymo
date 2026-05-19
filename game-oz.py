@@ -333,7 +333,7 @@ def draw_stoplight(grid_x, grid_y, state="red"):
     }
 
     stoplight_width = max(pole_width, housing_width)
-    stoplight_height = GRID_CELL_HEIGHT * 1.975
+    stoplight_height = pole_height + GRID_CELL_HEIGHT * 0.825
     center_x, center_y = clamp_center_to_window(
         center_x,
         center_y,
@@ -726,16 +726,10 @@ class Client(arcade.Sprite):
             self.current_index = (self.current_index + 1) % len(self.messages)
 
     def draw_chat(self):
-        chat_y = clamp(
-            self.center_y + GRID_CELL_HEIGHT * 0.7,
-            14,
-            WINDOW_HEIGHT - 14,
-        )
-        chat_x = clamp(self.center_x, 24, WINDOW_WIDTH - 24)
         arcade.draw_text(
             self.messages[self.current_index],
-            chat_x,
-            chat_y,
+            self.center_x,
+            self.center_y + GRID_CELL_HEIGHT * 0.7,
             arcade.color.WHITE,
             12,
             anchor_x="center",

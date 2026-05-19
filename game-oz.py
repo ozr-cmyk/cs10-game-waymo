@@ -747,58 +747,151 @@ class TitleView(arcade.View):
     def on_draw(self):
         self.clear()
 
+        import math
+
+        # Animated dark gradient background
+        arcade.draw_lrbt_rectangle_filled(
+            0,
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+            0,
+            (8, 10, 20),
+        )
+
+        # Neon glow background circles
+        for i in range(25):
+            x = (i * 97) % WINDOW_WIDTH
+            y = (i * 53 + int(self.window.time * 20 if hasattr(self.window, "time") else 0)) % WINDOW_HEIGHT
+
+            arcade.draw_circle_filled(
+                x,
+                y,
+                60 + (i % 4) * 20,
+                (40, 140, 255, 18),
+            )
+
+    # Animated title glow
+        pulse = 1.0 + 0.05 * math.sin(arcade.get_time() * 3)
+
+    # Outer glow
         arcade.draw_text(
             "STABLE TRAFFIC VARIANTS",
             WINDOW_WIDTH / 2,
-            WINDOW_HEIGHT - 140,
+            WINDOW_HEIGHT - 150,
+            (60, 180, 255, 80),
+            int(52 * pulse),
+            anchor_x="center",
+            bold=True,
+        )
+
+    # Main title
+        arcade.draw_text(
+            "STABLE TRAFFIC VARIANTS",
+            WINDOW_WIDTH / 2,
+            WINDOW_HEIGHT - 150,
             arcade.color.WHITE,
             42,
             anchor_x="center",
             bold=True,
         )
 
+    # Subtitle
+        arcade.draw_text(
+            "Autonomous Delivery Simulator",
+            WINDOW_WIDTH / 2,
+            WINDOW_HEIGHT - 195,
+            arcade.color.LIGHT_GRAY,
+            18,
+            anchor_x="center",
+            italic=True,
+        )
+
+    # Main instruction panel
+        panel_width = 720
+        panel_height = 420
+
+        panel_left = WINDOW_WIDTH / 2 - panel_width / 2
+        panel_bottom = WINDOW_HEIGHT / 2 - panel_height / 2 - 30
+
+    # Glass panel
+        arcade.draw_lbwh_rectangle_filled(
+            panel_left,
+            panel_bottom,
+            panel_width,
+            panel_height,
+            (18, 24, 38, 210),
+        )
+
+        arcade.draw_lbwh_rectangle_outline(
+            panel_left,
+            panel_bottom,
+            panel_width,
+            panel_height,
+            (90, 180, 255),
+            3,
+        )
+
         instructions = [
-            "HOW TO PLAY",
-            "",
-            "Drive the Waymo through the city streets.",
-            "Pick up the client and deliver them to the destination.",
-            "",
-            "CONTROLS",
-            "WASD = Move",
-            "SPACE = Stop / Resume",
-            "",
-            "RULES",
-            "Avoid moving traffic.",
-            "Red lights deduct 2 seconds.",
-            "Traffic obstacles deduct 5 seconds.",
-            "Pick up the client quickly for a +3 second bonus.",
-            "Reach the destination before time runs out.",
-            "",
-            "PRESS ENTER TO START",
+            ("MISSION", arcade.color.YELLOW, 28),
+            ("Pick up passengers and deliver them before time runs out.", arcade.color.WHITE, 18),
+
+            ("", arcade.color.WHITE, 18),
+
+            ("CONTROLS", arcade.color.YELLOW, 28),
+            ("W  A  S  D   → Move", arcade.color.WHITE, 18),
+            ("SPACE        → Stop / Resume", arcade.color.WHITE, 18),
+
+            ("", arcade.color.WHITE, 18),
+
+            ("RULES", arcade.color.YELLOW, 28),
+            ("• Avoid moving traffic", arcade.color.WHITE, 18),
+            ("• Red lights deduct 2 seconds", arcade.color.WHITE, 18),
+            ("• Traffic obstacles deduct 5 seconds", arcade.color.WHITE, 18),
+            ("• Fast pickups reward bonus time", arcade.color.WHITE, 18),
+
+            ("", arcade.color.WHITE, 18),
+
+            ("PRESS ENTER TO START", arcade.color.LIME_GREEN, 26),
         ]
 
-        start_y = WINDOW_HEIGHT - 240
+        text_y = panel_bottom + panel_height - 60
 
-        for i, line in enumerate(instructions):
-            color = arcade.color.LIGHT_GRAY
-            size = 20
-
-            if line == "HOW TO PLAY":
-                color = arcade.color.YELLOW
-                size = 28
-            elif line == "PRESS ENTER TO START":
-                color = arcade.color.GREEN
-                size = 24
-
+        for text, color, size in instructions:
             arcade.draw_text(
-                line,
+                text,
                 WINDOW_WIDTH / 2,
-                start_y - (i * 34),
+                text_y,
                 color,
                 size,
                 anchor_x="center",
+                bold=(size >= 26),
             )
 
+            text_y -= 34
+
+    # Decorative moving road lines
+        road_y = 70
+
+        for i in range(20):
+            offset = (arcade.get_time() * 250) % 80
+
+            arcade.draw_rectangle_filled(
+                i * 80 + offset,
+                road_y,
+                40,
+                6,
+                arcade.color.GOLD,
+            )
+
+    # Bottom hint
+        arcade.draw_text(
+            "Built with Python + Arcade",
+            WINDOW_WIDTH / 2,
+            20,
+            (160, 160, 160),
+            12,
+            anchor_x="center",
+        )
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ENTER:
             game_view = GameView()

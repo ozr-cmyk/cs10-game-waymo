@@ -900,7 +900,130 @@ class TitleView(arcade.View):
             game_view.setup()
             self.window.show_view(game_view)
 
+class WarningView(arcade.View):
+    def __init__(self):
+        super().__init__()
+        self.background_color = arcade.color.BLACK
+        self.animation_time = 0.0
 
+    def on_show_view(self):
+        arcade.set_background_color(self.background_color)
+
+    def on_update(self, delta_time):
+        self.animation_time += delta_time
+
+    def on_draw(self):
+        self.clear()
+
+        import math
+
+        # Background
+        arcade.draw_lrbt_rectangle_filled(
+            0,
+            WINDOW_WIDTH,
+            0,
+            WINDOW_HEIGHT,
+            (15, 8, 8),
+        )
+
+        # Pulsing red glow
+        glow_radius = 90 + 10 * math.sin(self.animation_time * 2)
+
+        arcade.draw_circle_filled(
+            WINDOW_WIDTH / 2,
+            WINDOW_HEIGHT - 120,
+            glow_radius,
+            (255, 50, 50, 40),
+        )
+
+        # WARNING title
+        arcade.draw_text(
+            "WARNING",
+            WINDOW_WIDTH / 2,
+            WINDOW_HEIGHT - 145,
+            arcade.color.WHITE,
+            48,
+            anchor_x="center",
+            bold=True,
+        )
+
+        # Main warning panel
+        panel_width = 860
+        panel_height = 320
+
+        left = WINDOW_WIDTH / 2 - panel_width / 2
+        bottom = WINDOW_HEIGHT / 2 - panel_height / 2
+
+        arcade.draw_lbwh_rectangle_filled(
+            left,
+            bottom,
+            panel_width,
+            panel_height,
+            (30, 20, 20, 220),
+        )
+
+        arcade.draw_lbwh_rectangle_outline(
+            left,
+            bottom,
+            panel_width,
+            panel_height,
+            arcade.color.RED,
+            4,
+        )
+
+        lines = [
+            "This game simulates unstable autonomous driving behavior.",
+            "",
+            "Waymo vehicles may:",
+            "• Run red lights",
+            "• Crash into moving traffic",
+            "• Ignore obstacles",
+            "• Behave unpredictably",
+            "",
+            "Drive carefully and reach the destination before time expires.",
+        ]
+
+        start_y = bottom + panel_height - 60
+
+        for i, line in enumerate(lines):
+
+            color = arcade.color.WHITE
+            size = 20
+
+            if "Waymo vehicles may" in line:
+                color = arcade.color.YELLOW
+                size = 24
+
+            if "Run red lights" in line or "Crash into moving traffic" in line:
+                color = arcade.color.ORANGE_RED
+
+            arcade.draw_text(
+                line,
+                WINDOW_WIDTH / 2,
+                start_y - i * 32,
+                color,
+                size,
+                anchor_x="center",
+            )
+
+        # Flashing continue text
+        if int(self.animation_time * 2) % 2 == 0:
+            arcade.draw_text(
+                "PRESS ENTER TO START",
+                WINDOW_WIDTH / 2,
+                90,
+                arcade.color.YELLOW,
+                28,
+                anchor_x="center",
+                bold=True,
+            )
+
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.ENTER:
+            game_view = GameView()
+            game_view.setup()
+            self.window.show_view(game_view)
+            
 class GameView(arcade.View):
     def __init__(self):
         super().__init__()

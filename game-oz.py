@@ -876,11 +876,13 @@ class TitleView(arcade.View):
         for i in range(20):
             offset = (self.window.time* 250) % 80
 
-            arcade.draw_rectangle_filled(
-                i * 80 + offset,
-                road_y,
-                40,
-                6,
+            x = i * 80 + offset
+
+            arcade.draw_lrtb_rectangle_filled(
+                x - 20,
+                x + 20,
+                road_y + 3,
+                road_y - 3,
                 arcade.color.GOLD,
             )
 

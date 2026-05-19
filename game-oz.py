@@ -1218,11 +1218,29 @@ class GameView(arcade.View):
         if arcade.check_for_collision_with_list(self.player_sprite, self.entity_list):
             self.game_over = True
 
-        if self.traffic_obstacle is not None and arcade.check_for_collision(
-            self.player_sprite,
-            self.traffic_obstacle,
-        ):
-            self.game_over = True
+if (
+    self.traffic_obstacle is not None
+    and arcade.check_for_collision(self.player_sprite, self.traffic_obstacle)
+):
+    # Deduct 5 seconds instead of losing instantly
+    self.time_remaining_seconds = max(
+        0.0,
+        self.time_remaining_seconds - 5.0,
+    )
+
+    # Show HUD penalty badge
+    self.hud_badge_text = "-5"
+    self.hud_badge_fill_color = (176, 28, 28, 235)
+    self.hud_badge_timer = HUD_BADGE_SECONDS
+
+    # Remove obstacle after hit so it only penalizes once
+    self.traffic_obstacle_list.remove(self.traffic_obstacle)
+    self.traffic_obstacle = None
+    self.traffic_obstacle_tile = None
+
+    # End game only if timer reaches zero
+    if self.time_remaining_seconds <= 0.0:
+        self.game_over = True
 
         if self.hud_badge_timer > 0.0:
             self.hud_badge_timer = max(0.0, self.hud_badge_timer - delta_time)

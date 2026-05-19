@@ -1234,8 +1234,6 @@ class GameView(arcade.View):
 
         self.elapsed_seconds += delta_time
         self.stoplight_timer += delta_time
-
-        self.apply_waymo_personality()
         occupied_tiles = {
             (entity.grid_x, entity.grid_y)
             for entity in self.entity_list

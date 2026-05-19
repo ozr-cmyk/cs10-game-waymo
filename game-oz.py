@@ -737,6 +737,64 @@ class Client(arcade.Sprite):
 
 
 class GameView(arcade.View):
+     def apply_waymo_personality(self):
+        """
+        Adds harmless imperfect autopilot behavior.
+
+        Behaviors:
+        - occasional hesitation
+        - harmless scenic detours
+        - extra thinking time at intersections
+        """
+
+        if (
+            not self.autopilot
+            or not self.route
+            or self.game_over
+            or self.victory
+        ):
+            return
+
+        current_tile = (self.player_grid_x, self.player_grid_y)
+
+        # Random hesitation
+        if random.random() < 0.08:
+            self.player_step_timer = 0.0
+            return
+
+        # Pause occasionally at intersections
+        if is_intersection_tile(*current_tile):
+            if random.random() < 0.15:
+                self.player_step_timer = 0.0
+                return
+
+        # Harmless reroute / scenic detour
+        if random.random() < 0.04:
+            neighboring_tiles = adjacent_street_tiles(current_tile)
+
+            valid_detours = [
+                tile
+                for tile in neighboring_tiles
+                if tile != current_tile
+                and tile not in self.route[: min(len(self.route), self.route_index + 3)]
+            ]
+
+            if valid_detours:
+                detour_tile = random.choice(valid_detours)
+
+                route_to_detour = shortest_route_between_tiles(
+                    current_tile,
+                    detour_tile,
+                )
+
+                route_to_goal = shortest_route_between_tiles(
+                    detour_tile,
+                    self.route_goal_tile,
+                )
+
+                if route_to_detour and route_to_goal:
+                    self.route = route_to_detour[:-1] + route_to_goal
+                    self.route_index = 0
     def __init__(self):
         super().__init__()
         self.background_color = arcade.color.BLACK

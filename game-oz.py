@@ -878,11 +878,11 @@ class TitleView(arcade.View):
 
             x = i * 80 + offset
 
-            arcade.draw_lrtb_rectangle_filled(
+            arcade.draw_lrbt_rectangle_filled(
                 x - 20,
                 x + 20,
-                road_y + 3,
                 road_y - 3,
+                road_y + 3,
                 arcade.color.GOLD,
             )
 

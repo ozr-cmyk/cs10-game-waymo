@@ -736,10 +736,6 @@ class Client(arcade.Sprite):
         )
 
 # Add a Title Card / Instructions Screen
-
-Add this new class ABOVE `class GameView(arcade.View):`
-
-```python
 class TitleView(arcade.View):
     def __init__(self):
         super().__init__()

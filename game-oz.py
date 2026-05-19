@@ -848,7 +848,6 @@ class TitleView(arcade.View):
             ("• Avoid moving traffic", arcade.color.WHITE, 18),
             ("• Red lights deduct 2 seconds", arcade.color.WHITE, 18),
             ("• Traffic obstacles deduct 5 seconds", arcade.color.WHITE, 18),
-            ("• Fast pickups reward bonus time", arcade.color.WHITE, 18),
 
             ("", arcade.color.WHITE, 18),
 

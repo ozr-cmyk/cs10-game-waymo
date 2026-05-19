@@ -787,7 +787,7 @@ class TitleView(arcade.View):
 
     # Main title
         arcade.draw_text(
-            "STABLE TRAFFIC VARIANTS",
+            "Waymo Simulator",
             WINDOW_WIDTH / 2,
             WINDOW_HEIGHT - 150,
             arcade.color.WHITE,
@@ -798,7 +798,7 @@ class TitleView(arcade.View):
 
     # Subtitle
         arcade.draw_text(
-            "Autonomous Delivery Simulator",
+            "By Akio and Oz",
             WINDOW_WIDTH / 2,
             WINDOW_HEIGHT - 195,
             arcade.color.LIGHT_GRAY,

@@ -127,6 +127,20 @@ def grid_to_center(grid_x, grid_y):
     )
 
 
+def clamp(value, minimum, maximum):
+    return max(minimum, min(maximum, value))
+
+
+def clamp_center_to_window(center_x, center_y, width=0.0, height=0.0):
+    """Keep a drawn object fully inside the visible window."""
+    half_width = width / 2
+    half_height = height / 2
+    return (
+        clamp(center_x, half_width, WINDOW_WIDTH - half_width),
+        clamp(center_y, half_height, WINDOW_HEIGHT - half_height),
+    )
+
+
 def with_alpha(color, alpha):
     return (color.r, color.g, color.b, alpha)
 
@@ -318,6 +332,15 @@ def draw_stoplight(grid_x, grid_y, state="red"):
         "green": arcade.color.GREEN,
     }
 
+    stoplight_width = max(pole_width, housing_width)
+    stoplight_height = pole_height + GRID_CELL_HEIGHT * 0.825
+    center_x, center_y = clamp_center_to_window(
+        center_x,
+        center_y,
+        stoplight_width,
+        stoplight_height,
+    )
+
     pole_left = center_x - pole_width / 2
     pole_bottom = center_y - GRID_CELL_HEIGHT * 0.25 - pole_height / 2
     arcade.draw_lbwh_rectangle_filled(
@@ -424,10 +447,16 @@ def draw_timer_graphic(
     margin = 18
     right = WINDOW_WIDTH - margin
     top = WINDOW_HEIGHT - margin
-    left = right - panel_width
-    bottom = top - panel_height
-    center_x = left + panel_width / 2
-    center_y = bottom + panel_height / 2
+    center_x = right - panel_width / 2
+    center_y = top - panel_height / 2
+    center_x, center_y = clamp_center_to_window(
+        center_x,
+        center_y,
+        panel_width,
+        panel_height,
+    )
+    left = center_x - panel_width / 2
+    bottom = center_y - panel_height / 2
 
     progress = 0.0 if seconds_total <= 0 else max(0.0, min(1.0, seconds_remaining / seconds_total))
     if progress > 0.5:
@@ -506,9 +535,16 @@ def draw_timer_graphic(
     if badge_text:
         badge_width = 42
         badge_height = 28
-        badge_right = left - 10
-        badge_left = badge_right - badge_width
-        badge_bottom = bottom + panel_height / 2 - badge_height / 2
+        badge_center_x = left - 10 - badge_width / 2
+        badge_center_y = bottom + panel_height / 2
+        badge_center_x, badge_center_y = clamp_center_to_window(
+            badge_center_x,
+            badge_center_y,
+            badge_width,
+            badge_height,
+        )
+        badge_left = badge_center_x - badge_width / 2
+        badge_bottom = badge_center_y - badge_height / 2
 
         arcade.draw_lbwh_rectangle_filled(
             badge_left,
@@ -581,7 +617,13 @@ class MovingEntity(arcade.Sprite):
         self.angle = direction_to_angle(self.direction, self.facing)
 
     def sync_to_grid(self):
-        self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
+        center_x, center_y = grid_to_center(self.grid_x, self.grid_y)
+        self.center_x, self.center_y = clamp_center_to_window(
+            center_x,
+            center_y,
+            self.width,
+            self.height,
+        )
 
     def step(self, occupied_tiles=None, stoplight_lookup=None, stoplight_timer=None):
         blocked_tiles = set(occupied_tiles or ())
@@ -669,7 +711,13 @@ class Client(arcade.Sprite):
         self.current_index = 0
 
     def sync_to_grid(self):
-        self.center_x, self.center_y = grid_to_center(self.grid_x, self.grid_y)
+        center_x, center_y = grid_to_center(self.grid_x, self.grid_y)
+        self.center_x, self.center_y = clamp_center_to_window(
+            center_x,
+            center_y,
+            self.width,
+            self.height,
+        )
 
     def update(self, delta_time, *args, **kwargs):
         self.chat_timer += delta_time
@@ -678,10 +726,16 @@ class Client(arcade.Sprite):
             self.current_index = (self.current_index + 1) % len(self.messages)
 
     def draw_chat(self):
+        chat_y = clamp(
+            self.center_y + GRID_CELL_HEIGHT * 0.7,
+            14,
+            WINDOW_HEIGHT - 14,
+        )
+        chat_x = clamp(self.center_x, 24, WINDOW_WIDTH - 24)
         arcade.draw_text(
             self.messages[self.current_index],
-            self.center_x,
-            self.center_y + GRID_CELL_HEIGHT * 0.7,
+            chat_x,
+            chat_y,
             arcade.color.WHITE,
             12,
             anchor_x="center",
@@ -753,9 +807,15 @@ class GameView(arcade.View):
 
         # Always start the player in the bottom-left street tile.
         self.player_grid_x, self.player_grid_y = START_TILE
-        self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
+        player_center_x, player_center_y = grid_to_center(
             self.player_grid_x,
             self.player_grid_y,
+        )
+        self.player_sprite.center_x, self.player_sprite.center_y = clamp_center_to_window(
+            player_center_x,
+            player_center_y,
+            self.player_sprite.width,
+            self.player_sprite.height,
         )
         self.route = shortest_route_between_tiles(START_TILE, self.route_goal_tile)
         self.route_index = 0
@@ -811,8 +871,14 @@ class GameView(arcade.View):
                 TRAFFIC_OBSTACLE_TEXTURE,
                 base_scale * (TRAFFIC_OBSTACLE_TILE_SIZE / 2),
             )
-            self.traffic_obstacle.center_x, self.traffic_obstacle.center_y = grid_to_center(
+            obstacle_center_x, obstacle_center_y = grid_to_center(
                 *self.traffic_obstacle_tile
+            )
+            self.traffic_obstacle.center_x, self.traffic_obstacle.center_y = clamp_center_to_window(
+                obstacle_center_x,
+                obstacle_center_y,
+                self.traffic_obstacle.width,
+                self.traffic_obstacle.height,
             )
             self.traffic_obstacle_list.append(self.traffic_obstacle)
 
@@ -1006,9 +1072,15 @@ class GameView(arcade.View):
         else:
             direction = "down"
         self.player_sprite.angle = direction_to_angle(direction, "left")
-        self.player_sprite.center_x, self.player_sprite.center_y = grid_to_center(
+        player_center_x, player_center_y = grid_to_center(
             self.player_grid_x,
             self.player_grid_y,
+        )
+        self.player_sprite.center_x, self.player_sprite.center_y = clamp_center_to_window(
+            player_center_x,
+            player_center_y,
+            self.player_sprite.width,
+            self.player_sprite.height,
         )
         self.refresh_route_from_player()
 
@@ -1064,8 +1136,14 @@ class GameView(arcade.View):
             sprite_scale_to_two_tiles(DESTINATION_TEXTURE),
         )
         self.destination.grid_x, self.destination.grid_y = destination_tile
-        self.destination.center_x, self.destination.center_y = grid_to_center(
+        destination_center_x, destination_center_y = grid_to_center(
             *destination_tile
+        )
+        self.destination.center_x, self.destination.center_y = clamp_center_to_window(
+            destination_center_x,
+            destination_center_y,
+            self.destination.width,
+            self.destination.height,
         )
         self.destination_list.append(self.destination)
         self.route_goal_tile = destination_tile

@@ -16,7 +16,9 @@ WAYMO_TILES_PER_SECOND = 4
 STOPLIGHT_PHASE_SECONDS = 7.0
 DELIVERY_TIME_LIMIT_SECONDS = 30.0
 RED_LIGHT_PENALTY_SECONDS = 2.0
-PENALTY_BADGE_SECONDS = 1.2
+CLIENT_BONUS_SECONDS = 3.0
+CLIENT_BONUS_THRESHOLD_SECONDS = 10.0
+HUD_BADGE_SECONDS = 1.2
 STREET_FILL_ALPHA = 165
 BLOCK_FILL_ALPHA = 195
 STREET_OUTLINE_ALPHA = 180
@@ -413,7 +415,8 @@ def draw_route(route):
 def draw_timer_graphic(
     seconds_remaining,
     seconds_total=DELIVERY_TIME_LIMIT_SECONDS,
-    penalty_badge_active=False,
+    badge_text=None,
+    badge_fill_color=(176, 28, 28, 235),
 ):
     """Draw the delivery countdown in the top-right corner."""
     panel_width = 230
@@ -500,7 +503,7 @@ def draw_timer_graphic(
         9,
     )
 
-    if penalty_badge_active:
+    if badge_text:
         badge_width = 42
         badge_height = 28
         badge_right = left - 10
@@ -512,7 +515,7 @@ def draw_timer_graphic(
             badge_bottom,
             badge_width,
             badge_height,
-            (176, 28, 28, 235),
+            badge_fill_color,
         )
         arcade.draw_lbwh_rectangle_outline(
             badge_left,
@@ -523,7 +526,7 @@ def draw_timer_graphic(
             2,
         )
         arcade.draw_text(
-            "-2",
+            badge_text,
             badge_left,
             badge_bottom + 3,
             arcade.color.WHITE,
@@ -715,7 +718,10 @@ class GameView(arcade.View):
         self.traffic_obstacle_list = arcade.SpriteList()
         self.traffic_obstacle_tile = None
         self.victory = False
-        self.penalty_badge_timer = 0.0
+        self.elapsed_seconds = 0.0
+        self.hud_badge_timer = 0.0
+        self.hud_badge_text = None
+        self.hud_badge_fill_color = (176, 28, 28, 235)
 
     def on_show_view(self):
         arcade.set_background_color(self.background_color)
@@ -735,7 +741,10 @@ class GameView(arcade.View):
         self.traffic_obstacle_tile = None
         self.victory = False
         self.time_remaining_seconds = self.time_limit_seconds
-        self.penalty_badge_timer = 0.0
+        self.elapsed_seconds = 0.0
+        self.hud_badge_timer = 0.0
+        self.hud_badge_text = None
+        self.hud_badge_fill_color = (176, 28, 28, 235)
 
         self.player_sprite = arcade.Sprite(
             "waymo.avif",
@@ -900,7 +909,8 @@ class GameView(arcade.View):
         draw_timer_graphic(
             self.time_remaining_seconds,
             self.time_limit_seconds,
-            penalty_badge_active=self.penalty_badge_timer > 0.0,
+            badge_text=self.hud_badge_text if self.hud_badge_timer > 0.0 else None,
+            badge_fill_color=self.hud_badge_fill_color,
         )
 
     def draw_streets(self):
@@ -1021,7 +1031,9 @@ class GameView(arcade.View):
                     0.0,
                     self.time_remaining_seconds - RED_LIGHT_PENALTY_SECONDS,
                 )
-                self.penalty_badge_timer = PENALTY_BADGE_SECONDS
+                self.hud_badge_text = "-2"
+                self.hud_badge_fill_color = (176, 28, 28, 235)
+                self.hud_badge_timer = HUD_BADGE_SECONDS
                 if self.time_remaining_seconds <= 0.0:
                     self.game_over = True
 
@@ -1076,6 +1088,11 @@ class GameView(arcade.View):
             return
 
         if arcade.check_for_collision(self.player_sprite, self.client):
+            if self.elapsed_seconds < CLIENT_BONUS_THRESHOLD_SECONDS:
+                self.time_remaining_seconds += CLIENT_BONUS_SECONDS
+                self.hud_badge_text = "+3"
+                self.hud_badge_fill_color = (34, 139, 34, 235)
+                self.hud_badge_timer = HUD_BADGE_SECONDS
             self.client_picked_up = True
             self.client_list = arcade.SpriteList()
             self.client = None
@@ -1085,6 +1102,7 @@ class GameView(arcade.View):
         if self.game_over or self.victory:
             return
 
+        self.elapsed_seconds += delta_time
         self.stoplight_timer += delta_time
         occupied_tiles = {
             (entity.grid_x, entity.grid_y)
@@ -1134,8 +1152,8 @@ class GameView(arcade.View):
         ):
             self.game_over = True
 
-        if self.penalty_badge_timer > 0.0:
-            self.penalty_badge_timer = max(0.0, self.penalty_badge_timer - delta_time)
+        if self.hud_badge_timer > 0.0:
+            self.hud_badge_timer = max(0.0, self.hud_badge_timer - delta_time)
 
         if not self.victory:
             self.time_remaining_seconds = max(0.0, self.time_remaining_seconds - delta_time)

@@ -15,6 +15,7 @@ WINDOW_TITLE = "Stable Traffic Variants Game"
 WAYMO_TILES_PER_SECOND = 4
 STOPLIGHT_PHASE_SECONDS = 7.0
 DELIVERY_TIME_LIMIT_SECONDS = 30.0
+RED_LIGHT_PENALTY_SECONDS = 2.0
 STREET_FILL_ALPHA = 165
 BLOCK_FILL_ALPHA = 195
 STREET_OUTLINE_ALPHA = 180
@@ -933,6 +934,7 @@ class GameView(arcade.View):
             self.right_pressed = False
 
     def move_player(self, dx, dy):
+        current_tile = (self.player_grid_x, self.player_grid_y)
         next_x = self.player_grid_x + dx
         next_y = self.player_grid_y + dy
 
@@ -955,6 +957,29 @@ class GameView(arcade.View):
             self.player_grid_y,
         )
         self.refresh_route_from_player()
+
+        if self.stoplight_lookup is not None and self.time_remaining_seconds > 0:
+            next_tile = (self.player_grid_x, self.player_grid_y)
+            current_state = stoplight_state_for_tile(
+                current_tile[0],
+                current_tile[1],
+                self.stoplight_lookup,
+                self.stoplight_timer,
+            )
+            next_state = stoplight_state_for_tile(
+                next_tile[0],
+                next_tile[1],
+                self.stoplight_lookup,
+                self.stoplight_timer,
+            )
+            if current_state == "red" or next_state == "red":
+                self.time_remaining_seconds = max(
+                    0.0,
+                    self.time_remaining_seconds - RED_LIGHT_PENALTY_SECONDS,
+                )
+                if self.time_remaining_seconds <= 0.0:
+                    self.game_over = True
+
         if (self.player_grid_x, self.player_grid_y) == self.route_goal_tile:
             self.victory = True
 

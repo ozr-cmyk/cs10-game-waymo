@@ -772,7 +772,7 @@ class TitleView(arcade.View):
             )
 
     # Animated title glow
-        pulse = 1.0 + 0.05 * math.sin(arcade.get_time() * 3)
+        pulse = 1.0 + 0.05 * math.sin(self.window.time * 3)
 
     # Outer glow
         arcade.draw_text(
@@ -874,7 +874,7 @@ class TitleView(arcade.View):
         road_y = 70
 
         for i in range(20):
-            offset = (arcade.get_time() * 250) % 80
+            offset = (self.window.time* 250) % 80
 
             arcade.draw_rectangle_filled(
                 i * 80 + offset,

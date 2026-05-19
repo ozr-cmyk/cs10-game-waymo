@@ -737,7 +737,7 @@ class Client(arcade.Sprite):
 
 
 class GameView(arcade.View):
-     def apply_waymo_personality(self):
+    def apply_waymo_personality(self):
         """
         Adds harmless imperfect autopilot behavior.
 

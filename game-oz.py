@@ -735,6 +735,80 @@ class Client(arcade.Sprite):
             anchor_x="center",
         )
 
+# Add a Title Card / Instructions Screen
+
+Add this new class ABOVE `class GameView(arcade.View):`
+
+```python
+class TitleView(arcade.View):
+    def __init__(self):
+        super().__init__()
+        self.background_color = arcade.color.BLACK
+
+    def on_show_view(self):
+        arcade.set_background_color(self.background_color)
+
+    def on_draw(self):
+        self.clear()
+
+        arcade.draw_text(
+            "STABLE TRAFFIC VARIANTS",
+            WINDOW_WIDTH / 2,
+            WINDOW_HEIGHT - 140,
+            arcade.color.WHITE,
+            42,
+            anchor_x="center",
+            bold=True,
+        )
+
+        instructions = [
+            "HOW TO PLAY",
+            "",
+            "Drive the Waymo through the city streets.",
+            "Pick up the client and deliver them to the destination.",
+            "",
+            "CONTROLS",
+            "WASD = Move",
+            "SPACE = Stop / Resume",
+            "",
+            "RULES",
+            "Avoid moving traffic.",
+            "Red lights deduct 2 seconds.",
+            "Traffic obstacles deduct 5 seconds.",
+            "Pick up the client quickly for a +3 second bonus.",
+            "Reach the destination before time runs out.",
+            "",
+            "PRESS ENTER TO START",
+        ]
+
+        start_y = WINDOW_HEIGHT - 240
+
+        for i, line in enumerate(instructions):
+            color = arcade.color.LIGHT_GRAY
+            size = 20
+
+            if line == "HOW TO PLAY":
+                color = arcade.color.YELLOW
+                size = 28
+            elif line == "PRESS ENTER TO START":
+                color = arcade.color.GREEN
+                size = 24
+
+            arcade.draw_text(
+                line,
+                WINDOW_WIDTH / 2,
+                start_y - (i * 34),
+                color,
+                size,
+                anchor_x="center",
+            )
+
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.ENTER:
+            game_view = GameView()
+            game_view.setup()
+            self.window.show_view(game_view)
+
 
 class GameView(arcade.View):
     def __init__(self):

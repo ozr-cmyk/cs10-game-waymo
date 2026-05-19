@@ -333,7 +333,7 @@ def draw_stoplight(grid_x, grid_y, state="red"):
     }
 
     stoplight_width = max(pole_width, housing_width)
-    stoplight_height = pole_height + GRID_CELL_HEIGHT * 0.825
+    stoplight_height = GRID_CELL_HEIGHT * 1.975
     center_x, center_y = clamp_center_to_window(
         center_x,
         center_y,

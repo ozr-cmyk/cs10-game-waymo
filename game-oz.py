@@ -809,18 +809,22 @@ class GameView(arcade.View):
             return
 
         if key == arcade.key.W:
+            self.stop_pressed = False
             self.up_pressed = True
             self.player_step_timer = 0.0
             self.pending_direction = (0, 1)
         elif key == arcade.key.S:
+            self.stop_pressed = False
             self.down_pressed = True
             self.player_step_timer = 0.0
             self.pending_direction = (0, -1)
         elif key == arcade.key.A:
+            self.stop_pressed = False
             self.left_pressed = True
             self.player_step_timer = 0.0
             self.pending_direction = (-1, 0)
         elif key == arcade.key.D:
+            self.stop_pressed = False
             self.right_pressed = True
             self.player_step_timer = 0.0
             self.pending_direction = (1, 0)

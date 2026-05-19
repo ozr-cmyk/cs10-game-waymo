@@ -895,10 +895,9 @@ class TitleView(arcade.View):
             anchor_x="center",
         )
     def on_key_press(self, key, modifiers):
-        if key == arcade.key.ENTER:
-            game_view = GameView()
-            game_view.setup()
-            self.window.show_view(game_view)
+    if key == arcade.key.ENTER:
+        warning_view = WarningView()
+        self.window.show_view(warning_view)
 
 class WarningView(arcade.View):
     def __init__(self):

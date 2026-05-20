@@ -1098,10 +1098,6 @@ class GameView(arcade.View):
             self.player_sprite.width,
             self.player_sprite.height,
         )
-        self.client_list.append(self.client)
-        self.client_picked_up = False
-        occupied_tiles.add(client_tile)
-
         self.player_list.append(self.player_sprite)
 
         player_origin = (self.player_grid_x, self.player_grid_y)

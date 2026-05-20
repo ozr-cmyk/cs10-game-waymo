@@ -1431,7 +1431,6 @@ class GameView(arcade.View):
 
         if destination_tile is None:
             # Initial route now leads to the client instead of the final goal
-            self.route_goal_tile = client_tile
             self.route = shortest_route_between_tiles(START_TILE, self.route_goal_tile)
             self.route_index = 0
             return

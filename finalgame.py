@@ -787,7 +787,7 @@ class TitleView(arcade.View):
 
     # Main title
         arcade.draw_text(
-            "WaymoSimulator ",
+            "WaymoSimulator",
             WINDOW_WIDTH / 2,
             WINDOW_HEIGHT - 150,
             arcade.color.WHITE,

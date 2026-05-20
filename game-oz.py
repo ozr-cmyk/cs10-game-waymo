@@ -1306,6 +1306,10 @@ class GameView(arcade.View):
                 )
 
     def on_key_press(self, key, modifiers):
+        # Restart game after game over or victory
+        if (self.game_over or self.victory) and key == arcade.key.SPACE:
+            self.setup()
+            return
         if key == arcade.key.SPACE:
             self.stop_pressed = not self.stop_pressed
             self.player_step_timer = 0.0

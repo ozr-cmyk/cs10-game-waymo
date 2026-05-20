@@ -1017,13 +1017,13 @@ class WarningView(arcade.View):
                 bold=True,
             )
 
-def on_key_press(self, key, modifiers):
-    if key == arcade.key.ENTER:
-        print("ENTER PRESSED ON WARNING VIEW")
+        def on_key_press(self, key, modifiers):
+            if key == arcade.key.ENTER:
+                print("ENTER PRESSED ON WARNING VIEW")
 
-        game_view = GameView()
-        game_view.setup()
-        self.window.show_view(game_view)
+                game_view = GameView()
+                game_view.setup()
+                self.window.show_view(game_view)
 
 
 class GameView(arcade.View):

@@ -1101,39 +1101,51 @@ class GameView(arcade.View):
             self.player_sprite.width,
             self.player_sprite.height,
         )
-        self.client_list.append(self.client)
-        self.client_picked_up = False
-        occupied_tiles.add(client_tile)
-
         self.player_list.append(self.player_sprite)
 
-        player_origin = (self.player_grid_x, self.player_grid_y)
+player_origin = (self.player_grid_x, self.player_grid_y)
 
-        available_tiles = [
-            tile
-            for tile in random_street_tiles(excluded={player_origin})
-            if route_distance_between_tiles(player_origin, tile) is not None
-            and route_distance_between_tiles(player_origin, tile) >= 10
-        ]
+available_tiles = [
+    tile
+    for tile in random_street_tiles(excluded={player_origin})
+    if route_distance_between_tiles(player_origin, tile) is not None
+    and route_distance_between_tiles(player_origin, tile) >= 10
+]
 
-        for grid_x, grid_y in random.sample(available_tiles, ENTITY_COUNT):
-            config = random.choice(ENTITY_TYPES)
+spawn_count = min(ENTITY_COUNT, len(available_tiles))
 
-            entity = MovingEntity(config)
-            entity.grid_x, entity.grid_y = grid_x, grid_y
-            entity.sync_to_grid()
+for grid_x, grid_y in random.sample(available_tiles, spawn_count):
+    config = random.choice(ENTITY_TYPES)
 
-            self.entity_list.append(entity)
+    entity = MovingEntity(config)
+    entity.grid_x = grid_x
+    entity.grid_y = grid_y
+    entity.sync_to_grid()
 
-        occupied_tiles = {(self.player_grid_x, self.player_grid_y)}
-        occupied_tiles.update((entity.grid_x, entity.grid_y) for entity in self.entity_list)
+    self.entity_list.append(entity)
 
-        # CREATE CLIENT TILE FIRST
-        client_tile = random.choice(random_street_tiles(excluded=occupied_tiles))
+# Build occupied tile set AFTER entities exist
+occupied_tiles = {(self.player_grid_x, self.player_grid_y)}
+occupied_tiles.update(
+    (entity.grid_x, entity.grid_y)
+    for entity in self.entity_list
+)
 
-        self.client = Client(CLIENT)
-        self.client.grid_x, self.client.grid_y = client_tile
-        self.client.sync_to_grid()
+# Create client tile
+client_tile = random.choice(
+    random_street_tiles(excluded=occupied_tiles)
+)
+
+# Create client
+self.client = Client(CLIENT)
+self.client.grid_x, self.client.grid_y = client_tile
+self.client.sync_to_grid()
+
+# Add client to sprite list
+self.client_list.append(self.client)
+
+# Mark client tile occupied
+occupied_tiles.add(client_tile)
 
         # NOW create the initial route to the client
         self.route_goal_tile = client_tile

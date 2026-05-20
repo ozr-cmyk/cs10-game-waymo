@@ -2,9 +2,9 @@
 
 ---
 
-# Your Game Title Here
+# WaymoSimulator
 
-**Group Members:** [List all group member names here]
+Oz Rafer, Akio Renteria 
 
 ## Description
 

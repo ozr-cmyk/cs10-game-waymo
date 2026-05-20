@@ -121,13 +121,11 @@ CLIENT = {
 
 
 def grid_to_center(grid_x, grid_y):
-    # Flip Y so row 0 is the bottom row visually
-    draw_y = GRID_ROWS - 1 - grid_y
-
     return (
         grid_x * GRID_CELL_WIDTH + GRID_CELL_WIDTH / 2,
-        draw_y * GRID_CELL_HEIGHT + GRID_CELL_HEIGHT / 2,
+        grid_y * GRID_CELL_HEIGHT + GRID_CELL_HEIGHT / 2,
     )
+
 
 def clamp(value, minimum, maximum):
     return max(minimum, min(maximum, value))

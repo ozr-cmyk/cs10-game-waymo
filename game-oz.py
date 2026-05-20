@@ -1131,9 +1131,6 @@ class GameView(arcade.View):
         self.client = Client(CLIENT)
         self.client.grid_x, self.client.grid_y = client_tile
         self.client.sync_to_grid()
-        self.client_list.append(self.client)
-        self.client_picked_up = False
-        occupied_tiles.add(client_tile)
 
         # NOW create the initial route to the client
         self.route_goal_tile = client_tile

@@ -1133,6 +1133,33 @@ class GameView(arcade.View):
         self.client_picked_up = False
         occupied_tiles.add(client_tile)
 
+# Initial guide line leads to the client
+        self.route_goal_tile = client_tile
+        self.route = shortest_route_between_tiles(
+            (self.player_grid_x, self.player_grid_y),
+            self.route_goal_tile,
+        )
+    self.route_index = 0
+
+    if len(self.route) >= 2:
+            first_step_x = self.route[1][0] - self.route[0][0]
+            first_step_y = self.route[1][1] - self.route[0][1]
+
+            if first_step_x > 0:
+                initial_direction = "right"
+            elif first_step_x < 0:
+                initial_direction = "left"
+            elif first_step_y > 0:
+                initial_direction = "up"
+            else:
+                initial_direction = "down"
+
+            self.player_sprite.angle = direction_to_angle(initial_direction, "left")
+        else:
+    self.player_sprite.angle = direction_to_angle("left", "left")
+
+self.refresh_route_from_player()
+
         self.traffic_obstacle_tile = choose_traffic_obstacle_tile(
             self.route,
             excluded=occupied_tiles,

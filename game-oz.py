@@ -1098,25 +1098,9 @@ class GameView(arcade.View):
             self.player_sprite.width,
             self.player_sprite.height,
         )
-        self.route = shortest_route_between_tiles(START_TILE, self.route_goal_tile)
-        self.route_index = 0
-
-        if len(self.route) >= 2:
-            first_step_x = self.route[1][0] - self.route[0][0]
-            first_step_y = self.route[1][1] - self.route[0][1]
-            if first_step_x > 0:
-                initial_direction = "right"
-            elif first_step_x < 0:
-                initial_direction = "left"
-            elif first_step_y > 0:
-                initial_direction = "up"
-            else:
-                initial_direction = "down"
-            self.player_sprite.angle = direction_to_angle(initial_direction, "left")
-        else:
-            self.player_sprite.angle = direction_to_angle("left", "left")
-
-        self.refresh_route_from_player()
+        self.client_list.append(self.client)
+        self.client_picked_up = False
+        occupied_tiles.add(client_tile)
 
         self.player_list.append(self.player_sprite)
 

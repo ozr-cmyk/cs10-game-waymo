@@ -1120,7 +1120,15 @@ class GameView(arcade.View):
 
         self.player_list.append(self.player_sprite)
 
-        available_tiles = random_street_tiles(excluded={(self.player_grid_x, self.player_grid_y)})
+        player_origin = (self.player_grid_x, self.player_grid_y)
+
+        available_tiles = [
+            tile
+            for tile in random_street_tiles(excluded={player_origin})
+            if route_distance_between_tiles(player_origin, tile) is not None
+            and route_distance_between_tiles(player_origin, tile) >= 10
+        ]
+
         for grid_x, grid_y in random.sample(available_tiles, ENTITY_COUNT):
             config = random.choice(ENTITY_TYPES)
 

@@ -1056,6 +1056,7 @@ class GameView(arcade.View):
         self.traffic_obstacle_list = arcade.SpriteList()
         self.traffic_obstacle_tile = None
         self.victory = False
+        self.game_over = False
         self.elapsed_seconds = 0.0
         self.hud_badge_timer = 0.0
         self.hud_badge_text = None

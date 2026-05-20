@@ -1098,9 +1098,25 @@ class GameView(arcade.View):
             self.player_sprite.width,
             self.player_sprite.height,
         )
-        self.client_list.append(self.client)
-        self.client_picked_up = False
-        occupied_tiles.add(client_tile)
+        self.route = shortest_route_between_tiles(START_TILE, self.route_goal_tile)
+        self.route_index = 0
+
+        if len(self.route) >= 2:
+            first_step_x = self.route[1][0] - self.route[0][0]
+            first_step_y = self.route[1][1] - self.route[0][1]
+            if first_step_x > 0:
+                initial_direction = "right"
+            elif first_step_x < 0:
+                initial_direction = "left"
+            elif first_step_y > 0:
+                initial_direction = "up"
+            else:
+                initial_direction = "down"
+            self.player_sprite.angle = direction_to_angle(initial_direction, "left")
+        else:
+            self.player_sprite.angle = direction_to_angle("left", "left")
+
+        self.refresh_route_from_player()
 
         self.player_list.append(self.player_sprite)
 
@@ -1133,58 +1149,31 @@ class GameView(arcade.View):
         self.client_picked_up = False
         occupied_tiles.add(client_tile)
 
-# Initial guide line leads to the client
-        self.route_goal_tile = client_tile
-        self.route = shortest_route_between_tiles(
-            (self.player_grid_x, self.player_grid_y),
-            self.route_goal_tile,
+        self.traffic_obstacle_tile = choose_traffic_obstacle_tile(
+            self.route,
+            excluded=occupied_tiles,
+            goal_tile=self.route_goal_tile,
         )
-    self.route_index = 0
+        if self.traffic_obstacle_tile is not None:
+            base_scale = sprite_scale_to_two_tiles(TRAFFIC_OBSTACLE_TEXTURE)
+            self.traffic_obstacle = arcade.Sprite(
+                TRAFFIC_OBSTACLE_TEXTURE,
+                base_scale * (TRAFFIC_OBSTACLE_TILE_SIZE / 2),
+            )
+            obstacle_center_x, obstacle_center_y = grid_to_center(
+                *self.traffic_obstacle_tile
+            )
+            self.traffic_obstacle.center_x, self.traffic_obstacle.center_y = clamp_center_to_window(
+                obstacle_center_x,
+                obstacle_center_y,
+                self.traffic_obstacle.width,
+                self.traffic_obstacle.height,
+            )
+            self.traffic_obstacle_list.append(self.traffic_obstacle)
 
-    if len(self.route) >= 2:
-            first_step_x = self.route[1][0] - self.route[0][0]
-            first_step_y = self.route[1][1] - self.route[0][1]
-
-            if first_step_x > 0:
-                initial_direction = "right"
-            elif first_step_x < 0:
-                initial_direction = "left"
-            elif first_step_y > 0:
-                initial_direction = "up"
-            else:
-                initial_direction = "down"
-
-            self.player_sprite.angle = direction_to_angle(initial_direction, "left")
-        else:
-            self.player_sprite.angle = direction_to_angle("left", "left")
-
-        self.refresh_route_from_player()
-
-                self.traffic_obstacle_tile = choose_traffic_obstacle_tile(
-                    self.route,
-                    excluded=occupied_tiles,
-                    goal_tile=self.route_goal_tile,
-                )
-                if self.traffic_obstacle_tile is not None:
-                    base_scale = sprite_scale_to_two_tiles(TRAFFIC_OBSTACLE_TEXTURE)
-                    self.traffic_obstacle = arcade.Sprite(
-                        TRAFFIC_OBSTACLE_TEXTURE,
-                        base_scale * (TRAFFIC_OBSTACLE_TILE_SIZE / 2),
-                    )
-                    obstacle_center_x, obstacle_center_y = grid_to_center(
-                        *self.traffic_obstacle_tile
-                    )
-                    self.traffic_obstacle.center_x, self.traffic_obstacle.center_y = clamp_center_to_window(
-                        obstacle_center_x,
-                        obstacle_center_y,
-                        self.traffic_obstacle.width,
-                        self.traffic_obstacle.height,
-                    )
-                    self.traffic_obstacle_list.append(self.traffic_obstacle)
-
-                self.stoplights = build_stoplights()
-                self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
-                self.game_over = False
+        self.stoplights = build_stoplights()
+        self.stoplight_lookup = build_stoplight_lookup(self.stoplights)
+        self.game_over = False
 
     def refresh_route_from_player(self):
         current_tile = (self.player_grid_x, self.player_grid_y)

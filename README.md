@@ -8,12 +8,14 @@ Oz Rafer, Akio Renteria
 
 ## Description
 
-[Write a short description of your game here. What is it about? What makes it fun?]
+This game exagerates the difficulty that Waymos experience in navigating a city landscape in order to showcase the downsides of having self-driving cars on San Francisco. It is a entertaining and mildly challenging driving game in which the player must insure that the Waymo stops at red lights, avoid cars, and stear clear of traffic. 
 
 ## Screenshots
 
 [Add 2-3 screenshots of your game in action here. You can embed images using:
 `![Screenshot description](path/to/screenshot.png)`]
+![Starting page](file:///Users/ozrafer/Desktop/starting%20page.png)
+![Game play](file:///Users/ozrafer/Desktop/gameplay.png)
 
 ## How to Install & Play
 

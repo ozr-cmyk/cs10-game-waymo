@@ -1153,11 +1153,11 @@ class GameView(arcade.View):
             else:
                 initial_direction = "down"
 
-    self.player_sprite.angle = direction_to_angle(initial_direction, "left")
-else:
-    self.player_sprite.angle = direction_to_angle("left", "left")
+            self.player_sprite.angle = direction_to_angle(initial_direction, "left")
+        else:
+            self.player_sprite.angle = direction_to_angle("left", "left")
 
-self.refresh_route_from_player()
+        self.refresh_route_from_player()
         self.traffic_obstacle_tile = choose_traffic_obstacle_tile(
             self.route,
             excluded=occupied_tiles,

@@ -1125,14 +1125,17 @@ class GameView(arcade.View):
         occupied_tiles = {(self.player_grid_x, self.player_grid_y)}
         occupied_tiles.update((entity.grid_x, entity.grid_y) for entity in self.entity_list)
 
+        # CREATE CLIENT TILE FIRST
         client_tile = random.choice(random_street_tiles(excluded=occupied_tiles))
+
         self.client = Client(CLIENT)
         self.client.grid_x, self.client.grid_y = client_tile
         self.client.sync_to_grid()
         self.client_list.append(self.client)
         self.client_picked_up = False
         occupied_tiles.add(client_tile)
-        # Initial guide line leads to the client
+
+        # NOW create the initial route to the client
         self.route_goal_tile = client_tile
         self.route = shortest_route_between_tiles(
             (self.player_grid_x, self.player_grid_y),

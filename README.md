@@ -22,7 +22,7 @@ This game exagerates the difficulty that Waymos experience in navigating a city 
 Simply download the game executable for your operating system and double-click it to play. No installation required!
 
 Mac:
-Your link here
+[Your link here](https://github.com/ozr-cmyk/cs10-game-waymo)
 
 Windows:
-Your link here
+[Your link here](https://github.com/ozr-cmyk/cs10-game-waymo)

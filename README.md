@@ -13,7 +13,7 @@ This game exagerates the difficulty that Waymos experience in navigating a city 
 ## Screenshots
 
 [Add 2-3 screenshots of your game in action here. You can embed images using:
-`![Screenshot description](path/to/screenshot.png)`]
+![Screenshot description](path/to/screenshot.png)`]
 ![Starting page](file:///Users/ozrafer/Desktop/starting%20page.png)
 ![Game play](file:///Users/ozrafer/Desktop/gameplay.png)
 
